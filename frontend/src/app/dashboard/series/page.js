@@ -76,10 +76,6 @@ export default function SeriesPage() {
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
             </div>
             <div className="field">
-              <label>Sujet</label>
-              <input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required />
-            </div>
-            <div className="field">
               <label>Type</label>
               <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
                 <option value="documentary">Documentaire</option>
@@ -97,6 +93,10 @@ export default function SeriesPage() {
               </select>
             </div>
             <button type="submit">Créer</button>
+          </div>
+          <div className="field">
+            <label>{"Sujet (max 3000 caractères) — décrivez l'idée globale de la série"}</label>
+            <textarea rows="4" maxLength="3000" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required placeholder="Ex : une série documentaire grand public sur l'histoire des océans, du rôle des courants à la biodiversité des abysses..." />
           </div>
         </form>
       </div>

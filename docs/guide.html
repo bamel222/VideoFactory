@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide de prise en main — Video Factory AI</title>
+<style>
+:root { --bg:#0f1720; --panel:#16222f; --ink:#e6edf3; --muted:#9fb0c0; --accent:#4da3ff; --code:#0d1b2a; --border:#253341; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.wrap { max-width:880px; margin:0 auto; padding:40px 28px 80px; }
+h1 { font-size:1.9rem; border-bottom:2px solid var(--accent); padding-bottom:10px; }
+h2 { font-size:1.35rem; margin-top:2.2em; color:var(--accent); }
+h3 { font-size:1.08rem; margin-top:1.6em; }
+a { color:var(--accent); }
+code { background:var(--code); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:.92em; }
+pre { background:var(--code); border:1px solid var(--border); border-radius:8px; padding:14px 16px; overflow-x:auto; line-height:1.5; }
+pre code { border:0; padding:0; background:none; }
+table { border-collapse:collapse; width:100%; margin:14px 0; font-size:.95em; }
+th, td { border:1px solid var(--border); padding:8px 12px; text-align:left; vertical-align:top; }
+th { background:var(--panel); color:var(--accent); }
+tr:nth-child(even) td { background:#131f2c; }
+blockquote { border-left:4px solid var(--accent); margin:14px 0; padding:2px 16px; background:var(--panel); border-radius:0 8px 8px 0; }
+ul, ol { padding-left:24px; }
+.toc { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 24px; margin:18px 0 28px; }
+.toc a { text-decoration:none; }
+hr { border:0; border-top:1px solid var(--border); margin:28px 0; }
+</style>
+</head>
+<body><div class="wrap">
+<h1 id="guide-de-prise-en-main-video-factory-ai">Guide de prise en main — Video Factory AI</h1>
+<p>Ce guide vous explique pas à pas comment <strong>déployer</strong> l'application, la <strong>prendre en main</strong>,
+configurer de <strong>vrais providers</strong> (avec de vrais clés API) et générer votre <strong>première vidéo</strong>
+(documentaire ou cartoon). Il couvre aussi la différence entre le flux de développement et le flux de déploiement.</p>
+<hr />
+<h2 id="table-des-matieres">Table des matières</h2>
+<ol>
+<li><a href="#1-prérequis">Prérequis</a></li>
+<li><a href="#2-déployer-lapplication-pas-à-pas">Déployer l'application (pas à pas)</a></li>
+<li>2.1 Mode développement (local)</li>
+<li>2.2 Mode production (Docker)</li>
+<li>2.3 Options de configuration</li>
+<li><a href="#3-créer-et-sécuriser-le-dépôt-github">Créer et sécuriser le dépôt GitHub</a></li>
+<li><a href="#4-prendre-en-main-lapplication-pas-à-pas">Prendre en main l'application (pas à pas)</a></li>
+<li><a href="#5-ajouter-de-vrais-providers-et-clés-api">Ajouter de vrais providers et clés API</a></li>
+<li>5.1 Les clés côté serveur (fichier <code>.env</code>)</li>
+<li>5.2 Déclarer un provider réel dans l'interface</li>
+<li>5.3 Tester le provider</li>
+<li>5.4 Résumé des rôles et services recommandés</li>
+<li><a href="#6-générer-votre-première-vidéo-pas-à-pas">Générer votre première vidéo (pas à pas)</a></li>
+<li><a href="#7-dev-vs-deploy--comprendre-la-différence">Dev vs Deploy : comprendre la différence</a></li>
+<li><a href="#8-dépannage">Dépannage</a></li>
+</ol>
+<hr />
+<h2 id="1-prerequis">1. Prérequis</h2>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Nécessité</th>
+<th>Version minimale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker + Docker Compose</td>
+<td>Oui (dev et prod)</td>
+<td>Docker 24+, Compose v2</td>
+</tr>
+<tr>
+<td>Git</td>
+<td>Oui</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Compte GitHub</td>
+<td>Pour héberger et automatiser</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Compte Supabase (optionnel)</td>
+<td>Pour Postgres/S3 géré</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Clés API fournisseurs</td>
+<td>Pour la génération réelle</td>
+<td>voir section 5</td>
+</tr>
+</tbody>
+</table>
+<p>Aucune connaissance préalable n'est requise au-delà de savoir ouvrir un terminal.</p>
+<hr />
+<h2 id="2-deployer-lapplication-pas-a-pas">2. Déployer l'application (pas à pas)</h2>
+<p>Le projet est un monorepo :</p>
+<pre><code>video-factory-ai/
+├── backend/    # API FastAPI (port 3001)
+├── frontend/   # Administration Next.js (port 3000)
+├── supabase/   # Migrations SQL et politiques RLS
+├── infra/      # Docker Compose, Nginx, sauvegardes
+└── docs/       # Spécifications et guides
+</code></pre>
+<h3 id="21-mode-developpement-local-sans-docker">2.1 Mode développement (local, sans Docker)</h3>
+<p>Utilisez ce mode pour travailler confortablement pendant le développement.</p>
+<p><strong>Étape 1 — Copier le fichier d'environnement :</strong></p>
+<pre><code class="language-bash">cp .env.example .env
+</code></pre>
+<p><strong>Étape 2 — Modifier les secrets dans <code>.env</code> (obligatoire en production, recommandé en dev) :</strong></p>
+<ul>
+<li><code>ENCRYPTION_KEY</code> : une phrase d'au moins 32 caractères (chiffre les clés API en base).</li>
+<li><code>JWT_SECRET</code> : un mot de passe long et aléatoire (signe les jetons d'authentification).</li>
+</ul>
+<blockquote>
+<p>Ne commitez jamais le fichier <code>.env</code> (il est ignoré par Git).</p>
+</blockquote>
+<p><strong>Étape 3 — Installer le backend :</strong></p>
+<pre><code class="language-bash">cd backend
+pip install -r requirements.txt
+python -m app.scripts.seed
+</code></pre>
+<p>Le seed crée le schéma SQLite, les comptes de test et les 13 providers factices (mock, gratuits).</p>
+<p><strong>Étape 4 — Installer le frontend :</strong></p>
+<pre><code class="language-bash">cd ../frontend
+npm install
+</code></pre>
+<p><strong>Étape 5 — Démarrer les deux serveurs :</strong></p>
+<pre><code class="language-bash">cd backend &amp;&amp; uvicorn app.main:app --reload --port 3001
+cd ../frontend &amp;&amp; npm run dev
+</code></pre>
+<ul>
+<li>Administration : http://localhost:3000</li>
+<li>API : http://localhost:3001</li>
+<li>Santé : http://localhost:3001/health</li>
+</ul>
+<p>Le frontend proxifie automatiquement <code>/api</code> vers le backend : <strong>aucun CORS</strong> à gérer.</p>
+<h3 id="22-mode-production-docker">2.2 Mode production (Docker)</h3>
+<p>Deux topologies sont fournies dans <code>infra/</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Usage</th>
+<th>Inclut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docker-compose.dev.yml</code></td>
+<td>Développement</td>
+<td>Postgres + Redis + backend (reload) + frontend (reload)</td>
+</tr>
+<tr>
+<td><code>docker-compose.deploy.yml</code></td>
+<td>Production</td>
+<td>Postgres + Redis + backend + worker + Nginx</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Étape 1 — Préparer le fichier <code>.env</code> à la racine</strong> (voir 2.1) et ajouter en plus :</p>
+<pre><code class="language-bash">POSTGRES_USER=vfactory
+POSTGRES_PASSWORD=&lt;mot de passe fort&gt;
+POSTGRES_DB=video_factory
+</code></pre>
+<p><strong>Étape 2 — Lancer l'environnement de développement :</strong></p>
+<pre><code class="language-bash">docker compose -f infra/docker-compose.dev.yml up --build
+</code></pre>
+<p>Les migrations SQL de <code>supabase/migrations/</code> sont appliquées automatiquement au premier démarrage de Postgres.</p>
+<p><strong>Étape 3 — Lancer l'environnement de production :</strong></p>
+<pre><code class="language-bash">docker compose -f infra/docker-compose.deploy.yml up --build -d
+docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.seed
+</code></pre>
+<p>Le service Nginx expose l'application sur le port 80 et sert le frontend compilé.
+Le worker (<code>app.workers.runner</code>) traite les jobs vidéo en arrière-plan via Redis.</p>
+<p><strong>Étape 4 — Vérifier le déploiement :</strong></p>
+<pre><code class="language-bash">curl http://localhost/health        # doit répondre {&quot;status&quot;:&quot;ok&quot;,...}
+docker compose -f infra/docker-compose.deploy.yml ps
+</code></pre>
+<h3 id="23-options-de-configuration">2.3 Options de configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Rôle</th>
+<th>Valeur par défaut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>Connexion base de données</td>
+<td><code>sqlite:///./video_factory.db</code></td>
+</tr>
+<tr>
+<td><code>REDIS_URL</code></td>
+<td>File de jobs et verrous</td>
+<td><code>redis://localhost:6379/0</code></td>
+</tr>
+<tr>
+<td><code>ENCRYPTION_KEY</code></td>
+<td>Chiffrement Fernet des secrets</td>
+<td>placeholder à changer</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>Signature des jetons JWT</td>
+<td>placeholder à changer</td>
+</tr>
+<tr>
+<td><code>CORS_ORIGINS</code></td>
+<td>Origines autorisées</td>
+<td><code>http://localhost:3000,http://localhost:3001</code></td>
+</tr>
+<tr>
+<td><code>SUPABASE_URL</code> / <code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+<td>Supabase (Postgres/S3/Auth)</td>
+<td>vides</td>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code>, <code>DEEPL_API_KEY</code>, …</td>
+<td>Clés des vrais providers</td>
+<td>vides</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-creer-et-securiser-le-depot-github">3. Créer et sécuriser le dépôt GitHub</h2>
+<p>Le projet actuel n'a <strong>pas de remote</strong> : tout est en local. Pour l'héberger :</p>
+<p><strong>Étape 1 — Créer un dépôt vide sur GitHub</strong> (ne pas cocher "Add a README").</p>
+<p><strong>Étape 2 — Lier le dépôt local :</strong></p>
+<pre><code class="language-bash">git remote add origin https://github.com/&lt;VOTRE-COMPTE&gt;/video-factory-ai.git
+git branch -M master
+git push -u origin master
+</code></pre>
+<p><strong>Étape 3 — Ajouter les secrets GitHub</strong> (pour l'CI/CD) :</p>
+<ul>
+<li>Ouvrez le dépôt → Settings → Secrets and variables → Actions.</li>
+<li>Ajoutez au minimum : <code>ENCRYPTION_KEY</code>, <code>JWT_SECRET</code>, et vos clés de fournisseurs.</li>
+</ul>
+<blockquote>
+<p>Ne mettez jamais de vraies clés dans les fichiers du dépôt. Les secrets GitHub Actions
+et le fichier local <code>.env</code> sont les bons endroits.</p>
+</blockquote>
+<hr />
+<h2 id="4-prendre-en-main-lapplication-pas-a-pas">4. Prendre en main l'application (pas à pas)</h2>
+<p>Une fois le backend et le frontend démarrés :</p>
+<p><strong>Étape 1 — Se connecter.</strong></p>
+<p>Ouvrez http://localhost:3000 et connectez-vous avec un compte seed :</p>
+<table>
+<thead>
+<tr>
+<th>Rôle</th>
+<th>Email</th>
+<th>Mot de passe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Owner (propriétaire)</td>
+<td><code>owner@vf.ai</code></td>
+<td><code>password123</code></td>
+</tr>
+<tr>
+<td>Admin</td>
+<td><code>admin@vf.ai</code></td>
+<td><code>password123</code></td>
+</tr>
+<tr>
+<td>Reviewer (relecteur)</td>
+<td><code>reviewer@vf.ai</code></td>
+<td><code>password123</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Changez ces mots de passe avant toute mise en production (page <strong>Utilisateurs</strong>).</p>
+</blockquote>
+<p><strong>Étape 2 — Explorer le menu.</strong></p>
+<ul>
+<li><strong>Vue d'ensemble</strong> : statistiques globales (séries, jobs, coûts).</li>
+<li><strong>Séries &amp; Pipelines</strong> : créer et lancer des documentaires / cartoons.</li>
+<li><strong>Providers</strong> : déclarer les fournisseurs (mock ou réels) et leurs clés.</li>
+<li><strong>Stockage</strong> : gérer les backends de stockage (local, S3, R2, B2, MinIO, Supabase).</li>
+<li><strong>Jobs</strong> : état d'avancement des pipelines.</li>
+<li><strong>Review</strong> : approuver ou renvoyer les épisodes.</li>
+<li><strong>Monétisation</strong> : prioriser les séries et estimer les budgets.</li>
+<li><strong>Utilisateurs</strong> : gérer les comptes et les rôles.</li>
+<li><strong>Audit</strong> : trace immuable des actions (hash chainé).</li>
+</ul>
+<p><strong>Étape 3 — Comprendre le cycle de vie d'une série.</strong></p>
+<pre><code>Création (Séries &amp; Pipelines)
+   └─&gt; Plan automatique (épisodes → scènes → tâches)
+   └─&gt; Dry-run (estimation budget/tâches, sans frais)
+   └─&gt; Run (exécution réelle par les providers)
+          └─&gt; Review (le Reviewer approuve ou demande une révision)
+          └─&gt; Publication (le Owner publie l'épisode)
+          └─&gt; SEO + Shorts générés automatiquement
+</code></pre>
+<p><strong>Étape 4 — Tester sans rien dépenser.</strong></p>
+<p>Grâce aux providers <code>mock://</code> pré-chargés, chaque étape fonctionne gratuitement :
+les images, audios et vidéos sont de vrais fichiers générés localement (via ffmpeg).
+C'est le moyen le plus rapide de prendre en main l'application.</p>
+<hr />
+<h2 id="5-ajouter-de-vrais-providers-et-cles-api">5. Ajouter de vrais providers et clés API</h2>
+<p>Deux niveaux : les clés <strong>serveur</strong> (dans le <code>.env</code> du backend) et la déclaration du <strong>provider réel</strong>
+(dans l'interface, avec sa clé et son endpoint).</p>
+<h3 id="51-les-cles-cote-serveur-fichier-env">5.1 Les clés côté serveur (fichier <code>.env</code>)</h3>
+<p>Le client réel (<code>RealProviderClient</code>) lit des clés dans l'environnement du backend.
+Modifiez votre <code>.env</code> backend et redémarrez le backend :</p>
+<pre><code class="language-bash"># Génération de texte (script, recherche, SEO, QA)
+OPENAI_API_KEY=sk-...
+
+# Traduction multilingue (doublage)
+DEEPL_API_KEY=...
+
+# Transcription (sous-titres)
+DEEPGRAM_API_KEY=...
+
+# Voix / TTS
+ELEVENLABS_API_KEY=...
+</code></pre>
+<blockquote>
+<p>Ces clés sont à <strong>vous</strong>. Créez-les sur les sites des fournisseurs
+(platform.openai.com, deepl.com, deepgram.com, elevenlabs.io…).
+Ne les partagez jamais et ne les commitez jamais.</p>
+</blockquote>
+<h3 id="52-declarer-un-provider-reel-dans-linterface">5.2 Déclarer un provider réel dans l'interface</h3>
+<ol>
+<li>Allez dans <strong>Providers</strong> → <strong>Ajouter un provider</strong>.</li>
+<li>Renseignez :</li>
+<li><strong>Nom</strong> : ex. <code>OpenAI GPT-4o mini</code></li>
+<li><strong>Rôle</strong> : le rôle de capacité (voir tableau 5.4).</li>
+<li><strong>Endpoint</strong> : URL de l'API (ex. <code>https://api.openai.com/v1/chat/completions</code>).
+     Une URL qui ne commence pas par <code>mock://</code> est traitée comme un provider <strong>réel</strong>.</li>
+<li><strong>Clé API</strong> : la clé correspondante (elle est chiffrée avec <code>ENCRYPTION_KEY</code> avant stockage).</li>
+<li><strong>Priorité</strong> : <strong>plus petit = choisi en premier</strong>. Mettez <code>1</code> pour que le provider réel
+     soit préféré au mock (priorité 10).</li>
+<li><strong>Modèle</strong> : ex. <code>gpt-4o-mini</code> (utilisé dans l'appel API).</li>
+<li><strong>Quota / coût / langues / formats</strong> : facultatifs mais utiles au sélecteur.</li>
+<li>Enregistrez.</li>
+</ol>
+<blockquote>
+<p>Un provider réel <strong>par rôle</strong> suffit : <code>research</code>, <code>script</code>, <code>translation</code>, <code>tts</code>,
+<code>voice</code>, <code>music</code>, <code>image</code>, <code>video</code>, <code>assembly</code>, <code>seo</code>, <code>qa</code>, <code>licensing</code>, <code>caption</code>.
+Tous les autres rôles restent sur les mocks si vous n'avez pas de clé pour eux.</p>
+</blockquote>
+<h3 id="53-tester-le-provider">5.3 Tester le provider</h3>
+<p>Dans <strong>Providers</strong>, cliquez sur l'icône santé de votre provider :</p>
+<ul>
+<li><strong>Healthcheck</strong> : vérifie que le provider est actif et joignable.</li>
+<li><strong>Tester la clé</strong> : vérifie qu'une clé est bien configurée et acceptée.</li>
+</ul>
+<p>Si le statut passe à "healthy" et que le test de clé renvoie OK, le sélecteur de providers
+pourra l'utiliser automatiquement.</p>
+<h3 id="54-resume-des-roles-et-services-recommandes">5.4 Résumé des rôles et services recommandés</h3>
+<table>
+<thead>
+<tr>
+<th>Rôle</th>
+<th>Ce que fait le pipeline</th>
+<th>Service recommandé</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>research</code></td>
+<td>Recherche de faits, plan de série</td>
+<td>OpenAI (ChatGPT)</td>
+</tr>
+<tr>
+<td><code>script</code></td>
+<td>Écriture des scripts d'épisodes</td>
+<td>OpenAI (ChatGPT)</td>
+</tr>
+<tr>
+<td><code>translation</code></td>
+<td>Doublage multilingue</td>
+<td>DeepL</td>
+</tr>
+<tr>
+<td><code>transcription</code></td>
+<td>Sous-titres</td>
+<td>Deepgram / Whisper</td>
+</tr>
+<tr>
+<td><code>tts</code></td>
+<td>Voix off</td>
+<td>ElevenLabs / Cartesia</td>
+</tr>
+<tr>
+<td><code>voice</code></td>
+<td>Identité vocale / clone</td>
+<td>ElevenLabs</td>
+</tr>
+<tr>
+<td><code>music</code></td>
+<td>Musiques et jingles</td>
+<td>Suno / Stable Audio</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>Frames, personnages, décors</td>
+<td>OpenAI DALL-E / Stable Diffusion</td>
+</tr>
+<tr>
+<td><code>video</code></td>
+<td>Clips vidéo</td>
+<td>Heygen / Pexels</td>
+</tr>
+<tr>
+<td><code>assembly</code></td>
+<td>Montage final, encodage</td>
+<td>ffmpeg (local)</td>
+</tr>
+<tr>
+<td><code>seo</code></td>
+<td>Titre, description, tags, shorts</td>
+<td>OpenAI</td>
+</tr>
+<tr>
+<td><code>qa</code></td>
+<td>Contrôle qualité, continuité</td>
+<td>OpenAI</td>
+</tr>
+<tr>
+<td><code>licensing</code></td>
+<td>Vérification des licences</td>
+<td>OpenAI</td>
+</tr>
+<tr>
+<td><code>caption</code></td>
+<td>Sous-titres synchronisés</td>
+<td>ffmpeg / Deepgram</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>En production (Docker), pensez à <strong>relayer les clés</strong> au conteneur backend :
+elles doivent figurer dans <code>environment:</code> du service <code>backend</code> de
+<code>infra/docker-compose.deploy.yml</code> (elles y sont déjà déclarées, il suffit de
+les remplir dans votre <code>.env</code> racine).</p>
+</blockquote>
+<hr />
+<h2 id="6-generer-votre-premiere-video-pas-a-pas">6. Générer votre première vidéo (pas à pas)</h2>
+<p>Une fois l'application démarrée et vos providers configurés :</p>
+<p><strong>Étape 1 — Créer la série.</strong></p>
+<p>Dans <strong>Séries &amp; Pipelines</strong>, remplissez :
+- <strong>Titre</strong> : ex. <code>Les océans, notre avenir</code>.
+- <strong>Sujet</strong> (jusqu'à 3000 caractères) : décrivez l'idée globale, le public visé, la tonalité.
+  Ex. : <em>"Documentaire grand public sur l'histoire des océans, du rôle des courants
+  à la biodiversité des abysses, avec des interviews fictives et des images d'archives."</em>
+- <strong>Type</strong> : <code>Documentaire</code> ou <code>Cartoon</code> (pour les enfants, un pack de continuité
+  avec personnages est généré automatiquement).
+- <strong>Épisodes</strong> : entre 1 et 10.
+- <strong>Langue</strong> : <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>, <code>it</code>, <code>pt</code>…</p>
+<p>Cliquez <strong>Créer</strong>. Le plan de série est généré automatiquement
+(bible, épisodes, scènes, segments, graphe de tâches).</p>
+<p><strong>Étape 2 — Lancer le dry-run (sans frais).</strong></p>
+<p>Dans la page de la série, cliquez <strong>Dry run</strong>. Vous obtenez un rapport :
+- nombre de tâches et d'épisodes ;
+- estimation budgétaire et coûts ;
+- vérification que tous les rôles nécessaires ont un provider disponible
+  (<code>ready_to_launch: true</code>).</p>
+<blockquote>
+<p>C'est l'étape de sécurité : on vérifie avant de dépenser de l'argent réel.</p>
+</blockquote>
+<p><strong>Étape 3 — Lancer le pipeline réel.</strong></p>
+<p>Cliquez <strong>Run</strong>. Le master orchestrator exécute les tâches dans l'ordre du graphe :
+recherche → script → narration → TTS → musique → images → vidéo → montage → QA →
+licences → SEO → shorts → rapport de provenance.</p>
+<ul>
+<li>Les tâches réussies sont <strong>checkpointées</strong> (reprise possible après interruption).</li>
+<li>Vous suivez la progression dans <strong>Jobs</strong>.</li>
+</ul>
+<p><strong>Étape 4 — Vérifier le Continuity Pack (cartoon).</strong></p>
+<p>Le pack de continuité (personnages, règles négatives) est créé au plan de série.
+Consultez-le depuis la page de la série : il garantit la cohérence des personnages
+et du style d'un épisode à l'autre.</p>
+<p><strong>Étape 5 — Relire et approuver (Reviewer).</strong></p>
+<p>Connectez-vous avec <code>reviewer@vf.ai</code> → <strong>Review</strong> :
+- consultez le rapport de QA et le package SEO ;
+- cliquez <strong>Approuver</strong> (ou <strong>Demander une révision</strong>).</p>
+<p><strong>Étape 6 — Publier (Owner).</strong></p>
+<p>Connectez-vous avec <code>owner@vf.ai</code>, ouvrez l'épisode approuvé et cliquez <strong>Publier</strong>.
+L'épisode passe au statut <code>published</code>.</p>
+<p><strong>Étape 7 — Récupérer vos fichiers.</strong></p>
+<p>Les médias générés sont stockés dans <code>backend/data/media/&lt;slug&gt;/</code>
+(episode_1_final.mp4, etc.) et répliqués sur les backends de stockage configurés.</p>
+<p><strong>Résultat :</strong> votre première vidéo est générée, contrôlée, approuvée et publiée.
+Pour une vraie vidéo utilisable, assurez-vous que les providers <code>image</code>, <code>video</code>, <code>tts</code>
+et <code>music</code> sont de vrais providers avec des clés valides (sinon les mocks produisent
+des fichiers techniques de démonstration).</p>
+<hr />
+<h2 id="7-dev-vs-deploy-comprendre-la-difference">7. Dev vs Deploy : comprendre la différence</h2>
+<h3 id="situation-actuelle-du-depot">Situation actuelle du dépôt</h3>
+<p>Le dépôt a <strong>une seule branche</strong> (<code>master</code>) et <strong>aucun remote</strong> (tout est local).
+Il n'existe donc pas encore de branches <code>dev</code> ou <code>deploy</code>. En revanche, le projet
+contient <strong>deux workflows GitHub Actions</strong> dans <code>.github/workflows/</code> qui matérialisent
+la séparation dev / déploiement :</p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Déclencheur</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dev.yml</code></td>
+<td>Push sur <code>master</code> + Pull Requests</td>
+<td><strong>CI de développement</strong> : lint, tests backend/frontend, audits de dépendances (<code>pip-audit</code>, <code>npm audit</code>), génération du SBOM</td>
+</tr>
+<tr>
+<td><code>deploy.yml</code></td>
+<td>Tag <code>v*</code> (ex. <code>v1.0.0</code>) ou déclenchement manuel</td>
+<td><strong>Livraison</strong> : build des images Docker, push vers le registre, déploiement sur le serveur cible</td>
+</tr>
+</tbody>
+</table>
+<h3 id="la-bonne-pratique-recommandee">La bonne pratique recommandée</h3>
+<pre><code>branche dev   → tests et intégration (CI = dev.yml)
+branche master → code stable et vérifié
+tag v1.0.0     → déclenche la production (workflow deploy.yml)
+</code></pre>
+<ol>
+<li><strong>Dev</strong> (branche de travail) : vous poussez vos modifications en continu.
+   <code>dev.yml</code> tourne à chaque push : si un test ou un lint casse, vous le savez immédiatement.</li>
+<li><strong>Master</strong> (branche stable) : une fois une fonctionnalité validée en dev,
+   on la fusionne dans <code>master</code> (Pull Request + review). <code>dev.yml</code> tourne aussi dessus.</li>
+<li><strong>Déploiement</strong> : quand master est prêt, on crée un <strong>tag</strong> (<code>git tag v1.0.0 &amp;&amp; git push --tags</code>).
+   <code>deploy.yml</code> construit les images, les pousse dans le registre de conteneurs,
+   puis déploie sur le serveur (via SSH ou webhook — à compléter dans le workflow
+   selon votre infrastructure).</li>
+</ol>
+<h3 id="en-resume">En résumé</h3>
+<ul>
+<li><strong>Dev = le cycle de développement</strong> : je code, je teste, je corrige (automatisé par <code>dev.yml</code>).</li>
+<li><strong>Deploy = le cycle de mise en production</strong> : je livre une version stable,
+  testée et taggée, exécutée par <code>deploy.yml</code>.</li>
+<li>Une seule codebase, deux automatismes, zéro surprise en production.</li>
+</ul>
+<hr />
+<h2 id="8-depannage">8. Dépannage</h2>
+<table>
+<thead>
+<tr>
+<th>Problème</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>401</code> à la connexion</td>
+<td>Vérifiez l'email/mot de passe ou relancez le seed sur une base vierge</td>
+</tr>
+<tr>
+<td>Le dry-run dit <code>ready_to_launch: false</code></td>
+<td>Un rôle n'a pas de provider actif : ajoutez-en un dans <strong>Providers</strong> (mock accepté)</td>
+</tr>
+<tr>
+<td>Mon provider réel n'est jamais choisi</td>
+<td>Baissez sa <strong>priorité</strong> sous celle du mock et faites son <strong>healthcheck</strong></td>
+</tr>
+<tr>
+<td><code>Provider ... n'a pas de clé API configurée</code></td>
+<td>Renseignez la clé correspondante dans le <code>.env</code> backend et redémarrez, ou en mode Docker dans le service <code>backend</code></td>
+</tr>
+<tr>
+<td><code>502</code> sur le frontend</td>
+<td>Le backend est arrêté : redémarrez uvicorn</td>
+</tr>
+<tr>
+<td>La publication est bloquée (409)</td>
+<td>L'épisode n'est pas <code>approved</code> (ou le rôle n'est pas Owner)</td>
+</tr>
+<tr>
+<td>Images/vidéos "vides"</td>
+<td>Les providers de ce rôle sont en <code>mock://</code> : configurez un vrai provider pour des médias réels</td>
+</tr>
+<tr>
+<td>Le résumé du job ne bouge pas</td>
+<td>Vérifiez Redis (<code>REDIS_URL</code>) et les logs du worker/backend</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>Pour toute question, les spécifications complètes sont dans <code>docs/spec.md</code>,
+la sécurité dans <code>docs/security.md</code> et l'inventaire des dépendances dans <code>docs/sbom.json</code>.</p>
+<hr>
+<p style="color:var(--muted);font-size:.85em">Généré à partir de <code>docs/GUIDE.md</code> — Video Factory AI.</p>
+</div></body></html>

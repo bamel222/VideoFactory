@@ -16,7 +16,7 @@ class Series(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    topic: Mapped[str] = mapped_column(String(1000), default="")
+    topic: Mapped[str] = mapped_column(String(3000), default="")
     kind: Mapped[str] = mapped_column(String(20), default="documentary")
     status: Mapped[str] = mapped_column(String(30), default="planned")
     planned_episodes: Mapped[int] = mapped_column(Integer, default=1)
