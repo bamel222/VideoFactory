@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     # Behavior
     use_fake_providers: bool = True
     data_dir: str = "./data"
+    montage_enabled: bool = True
 
     @property
     def cors_origins_list(self) -> list[str]:

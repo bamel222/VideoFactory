@@ -5,6 +5,11 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
+const MODE_LABELS = {
+  documentary: { images: "Photo-Cinéma", video: "Vidéo Clip IA" },
+  cartoon: { images: "Cartoon 2D Animé", video: "Cartoon Clip IA" },
+};
+
 function StatusBadge({ status }) {
   const map = {
     planned: "gray", running: "blue", done: "green", failed: "red",
@@ -70,6 +75,9 @@ export default function SeriesDetailPage() {
         <h1 style={{ margin: 0 }}>{series.title}</h1>
         <StatusBadge status={series.status} />
         <span className="badge blue">{series.kind}</span>
+        <span className="badge gray">{MODE_LABELS[series.kind]?.[series.generation_mode] || series.generation_mode}</span>
+        <span className="badge blue">{series.duration_minutes || 26} min / ép.</span>
+        {series.fact_check_enabled && <span className="badge yellow">Fact-check actif</span>}
         <span className="muted">{series.language}</span>
       </div>
       {error && <div className="error">{error}</div>}

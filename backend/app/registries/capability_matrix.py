@@ -44,7 +44,7 @@ CAPABILITY_MATRIX = {
         "fallbacks": [],
     },
     "video": {
-        "tasks": ["video_generate", "clip_assembly"],
+        "tasks": ["video_generate", "stock_video", "clip_assembly"],
         "outputs": ["video"],
         "fallbacks": [],
     },

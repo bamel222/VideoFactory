@@ -7,6 +7,7 @@ os.environ["REDIS_URL"] = "redis://localhost:0"
 os.environ["ENCRYPTION_KEY"] = "test-encryption-key-32-bytes-min!!"
 os.environ["JWT_SECRET"] = "test-jwt-secret"
 os.environ["USE_FAKE_PROVIDERS"] = "true"
+os.environ["MONTAGE_ENABLED"] = "false"
 os.environ["DATA_DIR"] = tempfile.mkdtemp()
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

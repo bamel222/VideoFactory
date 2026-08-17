@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Iterator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
@@ -52,3 +52,27 @@ def init_db() -> None:
     from app import models  # noqa: F401  ensure models registered
 
     Base.metadata.create_all(bind=engine)
+    _light_migrations(engine)
+
+
+_SQLITE_ADD_COLUMNS = {
+    "series": [
+        ("generation_mode", "VARCHAR(20) DEFAULT ''"),
+        ("duration_minutes", "INTEGER DEFAULT 26"),
+        ("fact_check_enabled", "BOOLEAN DEFAULT 1"),
+    ],
+}
+
+
+def _light_migrations(engine_) -> None:
+    """Additive, idempotent column migrations for SQLite dev databases."""
+    if not str(engine_.url).startswith("sqlite"):
+        return
+    with engine_.begin() as conn:
+        for table, columns in _SQLITE_ADD_COLUMNS.items():
+            if not inspect(conn).has_table(table):
+                continue
+            existing = {c["name"] for c in inspect(conn).get_columns(table)}
+            for name, ddl in columns:
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))

@@ -6,20 +6,39 @@ import os
 import wave
 
 import httpx
+from sqlalchemy import select
 
-from app.agents.ffmpeg_utils import generate_image_png, generate_test_video, generate_tone_wav, ffmpeg_available
+from app.agents.ffmpeg_utils import generate_image_png, generate_test_video, generate_tone_wav, ffmpeg_available, probe_duration, run_ffmpeg
 from app.core.config import get_settings
-from app.models import Provider
+from app.models import Checkpoint, JobTask, Provider
 
 settings = get_settings()
 MEDIA_ROOT = os.path.join(settings.data_dir, "media")
 
 
+def _episode_text(db, episode_id: int | None, task_type: str, language: str | None = None) -> str:
+    """Fetch the text output of a sibling task of the same episode (used by TTS)."""
+    if not db or not episode_id:
+        return ""
+    q = (
+        select(JobTask)
+        .where(JobTask.episode_id == episode_id, JobTask.task_type == task_type, JobTask.status == "succeeded")
+        .order_by(JobTask.id.desc())
+    )
+    for t in db.scalars(q):
+        if language and (t.payload or {}).get("language") != language:
+            continue
+        res = t.result or {}
+        return res.get("content") or res.get("text") or ""
+    return ""
+
+
 class MockProviderClient:
     """Free/local simulation of any provider. Produces real audio/image/video files."""
 
-    def __init__(self, provider: Provider):
+    def __init__(self, provider: Provider, db=None):
         self.provider = provider
+        self.db = db
 
     def generate(self, task) -> dict:
         task_type = task.task_type
@@ -41,6 +60,7 @@ class MockProviderClient:
             "music_generate": self._music,
             "image_generate": self._image,
             "video_generate": self._video,
+            "stock_video": self._video,
             "clip_assembly": self._clip_assembly,
             "final_assembly": self._final_assembly,
             "subtitle": self._subtitle,
@@ -135,9 +155,26 @@ class MockProviderClient:
 
     def _tts(self, task) -> dict:
         lang = (task.payload or {}).get("language", "fr")
+        subtype = (task.payload or {}).get("subtype", "voice")
         path = os.path.join(MEDIA_ROOT, self._slug(task), f"tts_{task.id}_{lang}.wav")
-        generate_tone_wav(path, 6.0, freq=440 if lang == "fr" else 523)
-        return {"type": "audio", "path": path, "duration_s": 6.0, "language": lang}
+        text = self._tts_text(task)
+        words = len(text.split()) if text else 0
+        duration = max(4.0, min(120.0, words * 0.4)) if words else 6.0
+        generate_tone_wav(path, duration, freq=440 if lang == "fr" else 523)
+        return {"type": "audio", "path": path, "duration_s": duration, "language": lang, "subtype": subtype}
+
+    def _tts_text(self, task) -> str:
+        payload = task.payload or {}
+        if payload.get("text"):
+            return payload["text"]
+        subtype = payload.get("subtype")
+        if subtype == "narration":
+            return _episode_text(self.db, task.episode_id, "narration")
+        if subtype == "dub":
+            return _episode_text(self.db, task.episode_id, "translate", payload.get("language"))
+        if subtype == "voice_identity":
+            return _episode_text(self.db, task.episode_id, "plan_series")
+        return ""
 
     def _music(self, task) -> dict:
         subtype = (task.payload or {}).get("subtype", "theme")
@@ -163,20 +200,50 @@ class MockProviderClient:
         return {"type": "video", "path": path, "duration_s": 8.0}
 
     def _clip_assembly(self, task) -> dict:
+        mode = (task.payload or {}).get("mode", "images")
         path = os.path.join(MEDIA_ROOT, self._slug(task), f"episode_{task.episode_id}_raw.mp4")
-        if ffmpeg_available():
-            generate_test_video(path, 8.0)
+        if self._can_montage() and task.episode_id:
+            from app.agents import montage
+
+            media = montage.collect_episode_media(self.db, task.episode_id, mode)
+            if mode == "images" and media["images"]:
+                montage.build_slideshow(media["images"], path, dur_each=12.0)
+            elif media["clips"]:
+                montage.concat_videos(media["clips"], path)
+            else:
+                generate_test_video(path, 8.0)
         else:
-            generate_tone_wav(path.replace(".mp4", ".wav"), 8.0)
-        return {"type": "video", "path": path, "duration_s": 8.0}
+            generate_test_video(path, 8.0)
+        return {"type": "video", "path": path, "duration_s": probe_duration(path), "raw": True}
 
     def _final_assembly(self, task) -> dict:
+        mode = (task.payload or {}).get("mode", "images")
         path = os.path.join(MEDIA_ROOT, self._slug(task), f"episode_{task.episode_id}_final.mp4")
-        if ffmpeg_available():
-            generate_test_video(path, 10.0)
+        if self._can_montage() and task.episode_id:
+            from app.agents import montage
+
+            media = montage.collect_episode_media(self.db, task.episode_id, mode)
+            raw = media["raw"]
+            if not raw or not os.path.exists(raw):
+                raw = os.path.join(MEDIA_ROOT, self._slug(task), f"episode_{task.episode_id}_raw.mp4")
+                if not os.path.exists(raw):
+                    self._clip_assembly(task)
+            try:
+                montage.mix_audio(
+                    raw,
+                    media["audio"][:1],
+                    media["audio"][1:],
+                    media["subtitles"][0] if media["subtitles"] else None,
+                    path,
+                )
+            except Exception:
+                generate_test_video(path, 10.0)
         else:
-            generate_tone_wav(path.replace(".mp4", ".wav"), 10.0)
-        return {"type": "video", "path": path, "duration_s": 10.0, "normalized": True}
+            generate_test_video(path, 10.0)
+        return {"type": "video", "path": path, "duration_s": probe_duration(path), "normalized": True}
+
+    def _can_montage(self) -> bool:
+        return settings.montage_enabled and ffmpeg_available() and self.db is not None
 
     def _subtitle(self, task) -> dict:
         lang = (task.payload or {}).get("language", "fr")
@@ -190,8 +257,9 @@ class MockProviderClient:
 class RealProviderClient:
     """Real API integrations, active only when keys are configured in env."""
 
-    def __init__(self, provider: Provider):
+    def __init__(self, provider: Provider, db=None):
         self.provider = provider
+        self.db = db
 
     def generate(self, task) -> dict:
         role = self.provider.role
@@ -199,7 +267,14 @@ class RealProviderClient:
             return self._llm(task)
         if role == "translation" and settings.deepl_api_key:
             return self._deepl(task)
-        raise RuntimeError(f"Provider {self.provider.name} (role={role}) n'a pas de clé API configurée")
+        if role in ("tts", "voice") and settings.elevenlabs_api_key:
+            return self._elevenlabs(task)
+        if role == "image" and settings.openai_api_key:
+            return self._openai_image(task)
+        raise RuntimeError(
+            f"Provider {self.provider.name} (role={role}) : clé API manquante "
+            f"(OPENAI_API_KEY / DEEPL_API_KEY / ELEVENLABS_API_KEY) ou provider réel non supporté"
+        )
 
     def _llm(self, task) -> dict:
         url = self.provider.endpoint or "https://api.openai.com/v1/chat/completions"
@@ -228,9 +303,142 @@ class RealProviderClient:
         translated = resp.json()["translations"][0]["text"]
         return {"type": "text", "content": translated, "language": lang}
 
+    def _elevenlabs(self, task) -> dict:
+        text = (task.payload or {}).get("text") or self._source_text(task)
+        if not text:
+            raise RuntimeError("Aucun texte à synthétiser pour le TTS")
+        lang = (task.payload or {}).get("language", "fr")
+        subtype = (task.payload or {}).get("subtype", "voice")
+        voice = self.provider.model or "21m00Tcm4TlvDq8ikWAM"
+        resp = httpx.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voice}",
+            headers={"xi-api-key": settings.elevenlabs_api_key, "Content-Type": "application/json"},
+            json={"text": text, "model_id": "eleven_multilingual_v2"},
+            timeout=180,
+        )
+        resp.raise_for_status()
+        path = os.path.join(MEDIA_ROOT, "real", f"tts_{task.id}_{lang}.mp3")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(resp.content)
+        return {"type": "audio", "path": path, "language": lang, "subtype": subtype}
 
-def build_provider_client(provider: Provider):
+    def _openai_image(self, task) -> dict:
+        prompt = (task.payload or {}).get("prompt") or (task.payload or {}).get("topic") or "image documentaire"
+        if task.payload and task.payload.get("subtype") == "character_sheet":
+            prompt = f"Character design sheet cartoon : {prompt}"
+        resp = httpx.post(
+            "https://api.openai.com/v1/images/generations",
+            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+            json={"model": self.provider.model or "dall-e-3", "prompt": prompt, "size": "1024x1024", "n": 1},
+            timeout=180,
+        )
+        resp.raise_for_status()
+        b64 = resp.json()["data"][0]["b64_json"]
+        path = os.path.join(MEDIA_ROOT, "real", f"img_{task.id}_{(task.payload or {}).get('subtype', 'frame')}.png")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(__import__("base64").b64decode(b64))
+        return {"type": "image", "path": path, "subtype": (task.payload or {}).get("subtype", "frame")}
+
+    def _source_text(self, task) -> str:
+        payload = task.payload or {}
+        subtype = payload.get("subtype")
+        if subtype == "narration":
+            return _episode_text(self.db, task.episode_id, "narration")
+        if subtype == "dub":
+            return _episode_text(self.db, task.episode_id, "translate", payload.get("language"))
+        if subtype == "voice_identity":
+            return _episode_text(self.db, task.episode_id, "plan_series")
+        return ""
+
+
+class StockVideoClient:
+    """Fetch stock footage from Pexels (or Pixabay) and trim it to the segment duration."""
+
+    def __init__(self, provider: Provider, db=None):
+        self.provider = provider
+        self.db = db
+        self.api_key = __import__("app.core.encryption", fromlist=["decrypt_secret"]).decrypt_secret(provider.api_key_encrypted)
+
+    def generate(self, task) -> dict:
+        query = (task.payload or {}).get("prompt") or (task.payload or {}).get("topic") or "nature"
+        duration = (task.payload or {}).get("duration_s") or 10.0
+        endpoint = (self.provider.endpoint or "https://api.pexels.com/videos/search").lower()
+        if "pixabay" in endpoint:
+            return self._pixabay(task, query, duration)
+        return self._pexels(task, query, duration)
+
+    def _pexels(self, task, query: str, duration: float) -> dict:
+        if not self.api_key:
+            raise RuntimeError("Clé API stock (Pexels) manquante")
+        resp = httpx.get(
+            "https://api.pexels.com/videos/search",
+            headers={"Authorization": self.api_key},
+            params={"query": query, "per_page": 5, "orientation": "landscape"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        videos = (resp.json().get("videos") or [])
+        if not videos:
+            raise RuntimeError(f"Aucun clip stock trouvé pour '{query}'")
+        best = self._pick_pexels_file(videos)
+        path = os.path.join(MEDIA_ROOT, self._slug(task), f"stock_{task.id}.mp4")
+        return self._download_trim(best, path, duration, task)
+
+    def _pick_pexels_file(self, videos) -> str:
+        for video in videos:
+            files = video.get("video_files") or []
+            files.sort(key=lambda f: (f.get("width") or 0), reverse=True)
+            for f in files:
+                if (f.get("width") or 0) >= 640 and (f.get("height") or 0) < (f.get("width") or 0) + 1:
+                    return f["link"]
+        return videos[0]["video_files"][0]["link"]
+
+    def _pixabay(self, task, query: str, duration: float) -> dict:
+        if not self.api_key:
+            raise RuntimeError("Clé API stock (Pixabay) manquante")
+        resp = httpx.get(
+            "https://pixabay.com/api/videos/",
+            params={"key": self.api_key, "q": query, "video_type": "film", "per_page": 5},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        hits = (resp.json().get("hits") or [])
+        if not hits:
+            raise RuntimeError(f"Aucun clip stock trouvé pour '{query}'")
+        link = hits[0].get("videos", {}).get("large", {}).get("url") or hits[0].get("videos", {}).get("medium", {}).get("url")
+        if not link:
+            raise RuntimeError("Clip Pixabay sans URL exploitable")
+        path = os.path.join(MEDIA_ROOT, self._slug(task), f"stock_{task.id}.mp4")
+        return self._download_trim(link, path, duration, task)
+
+    def _download_trim(self, url: str, path: str, duration: float, task) -> dict:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".download"
+        with httpx.stream("GET", url, follow_redirects=True, timeout=120) as r:
+            r.raise_for_status()
+            with open(tmp, "wb") as f:
+                for chunk in r.iter_bytes():
+                    f.write(chunk)
+        run_ffmpeg(
+            ["-y", "-i", tmp, "-t", f"{duration}", "-vf",
+             "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1",
+             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p", path],
+            timeout=300,
+        )
+        os.remove(tmp)
+        return {"type": "video", "path": path, "duration_s": duration, "stock": True}
+
+    def _slug(self, task) -> str:
+        topic = (task.payload or {}).get("topic") or "stock"
+        return hashlib.sha1(topic.encode()).hexdigest()[:10]
+
+
+def build_provider_client(provider: Provider, db=None):
     endpoint = (provider.endpoint or "").lower()
     if endpoint.startswith("mock://") or endpoint.startswith("fake://"):
-        return MockProviderClient(provider)
-    return RealProviderClient(provider)
+        return MockProviderClient(provider, db)
+    if "pexels" in endpoint or "pixabay" in endpoint:
+        return StockVideoClient(provider, db)
+    return RealProviderClient(provider, db)

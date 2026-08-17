@@ -35,7 +35,10 @@ def ffmpeg_available() -> bool:
 def run_ffmpeg(args: list[str], timeout: int = 120) -> None:
     binary = ffmpeg_binary()
     cmd = [binary, "-y", *args]
-    subprocess.run(cmd, capture_output=True, timeout=timeout, check=True)
+    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    if result.returncode != 0:
+        stderr = (result.stderr or b"").decode(errors="replace")[-3000:]
+        raise RuntimeError(f"ffmpeg failed (rc={result.returncode}): {stderr}")
 
 
 def generate_tone_wav(path: str, duration_s: float, freq: float = 440.0, sample_rate: int = 44100) -> str:

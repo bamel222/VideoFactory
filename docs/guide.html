@@ -450,10 +450,29 @@ les remplir dans votre <code>.env</code> racine).</p>
   à la biodiversité des abysses, avec des interviews fictives et des images d'archives."</em>
 - <strong>Type</strong> : <code>Documentaire</code> ou <code>Cartoon</code> (pour les enfants, un pack de continuité
   avec personnages est généré automatiquement).
+- <strong>Format de génération</strong> : selon le type (voir la table des 4 modes ci-dessous).
+- <strong>Durée / épisode</strong> : entre <strong>24 et 28 minutes</strong> (défaut 26).
+- <strong>Fact-checking</strong> (cartoon uniquement) : cochez <em>"Basé sur des faits réels"</em>
+  pour inclure la vérification des faits dans le pipeline. Pour une fiction, laissez décoché.
 - <strong>Épisodes</strong> : entre 1 et 10.
 - <strong>Langue</strong> : <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>, <code>it</code>, <code>pt</code>…</p>
 <p>Cliquez <strong>Créer</strong>. Le plan de série est généré automatiquement
-(bible, épisodes, scènes, segments, graphe de tâches).</p>
+(bible, épisodes, scènes, segments, graphe de tâches).
+Astuce : placez la souris sur les options du menu <em>Format de génération</em>
+pour afficher une description détaillée de chaque mode.</p>
+<table>
+<thead>
+<tr><th>Type</th><th>Mode</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Documentaire</td><td><strong>Photo-Cinéma</strong> (<code>images</code>)</td><td>Images fixes (12 s/image) animées avec un effet Ken Burns, narration, musique et sous-titres. Style cinématographique classique.</td></tr>
+<tr><td>Documentaire</td><td><strong>Vidéo Clip IA</strong> (<code>video</code>)</td><td>Clips vidéo réels issus de banques d'images (Pexels/Pixabay) puis clips IA en secours. Rendu dynamique, proche d'un reportage.</td></tr>
+<tr><td>Cartoon</td><td><strong>Cartoon Clip IA</strong> (<code>video</code>)</td><td>Clips vidéo animés générés par IA. Style 3D / animation fluide.</td></tr>
+<tr><td>Cartoon</td><td><strong>Cartoon 2D Animé</strong> (<code>images</code>)</td><td>Images illustrées animées en 2D légère (parallaxe des décors). Style dessin animé traditionnel, plus économique.</td></tr>
+</tbody>
+</table>
+<p>Les documentaires sont <strong>toujours fact-checkés</strong>. Pour les cartoons,
+le fact-check n'est inclus que si <em>"Basé sur des faits réels"</em> est coché.</p>
 <p><strong>Étape 2 — Lancer le dry-run (sans frais).</strong></p>
 <p>Dans la page de la série, cliquez <strong>Dry run</strong>. Vous obtenez un rapport :
 - nombre de tâches et d'épisodes ;
@@ -465,11 +484,14 @@ les remplir dans votre <code>.env</code> racine).</p>
 </blockquote>
 <p><strong>Étape 3 — Lancer le pipeline réel.</strong></p>
 <p>Cliquez <strong>Run</strong>. Le master orchestrator exécute les tâches dans l'ordre du graphe :
-recherche → script → narration → TTS → musique → images → vidéo → montage → QA →
-licences → SEO → shorts → rapport de provenance.</p>
+recherche → script → narration → TTS → musique → images/vidéo → <strong>montage réel</strong> (ffmpeg)
+→ QA → licences → SEO → shorts → rapport de provenance.</p>
 <ul>
 <li>Les tâches réussies sont <strong>checkpointées</strong> (reprise possible après interruption).</li>
 <li>Vous suivez la progression dans <strong>Jobs</strong>.</li>
+<li>Le <strong>montage réel</strong> est actif par défaut (<code>MONTAGE_ENABLED=true</code>) : le pipeline assemble
+les médias produits en une vraie vidéo d'épisode (Ken Burns, concaténation des clips,
+mixage narration + musique, sous-titres brûlés). Pour désactiver, passez <code>MONTAGE_ENABLED=false</code>.</li>
 </ul>
 <p><strong>Étape 4 — Vérifier le Continuity Pack (cartoon).</strong></p>
 <p>Le pack de continuité (personnages, règles négatives) est créé au plan de série.

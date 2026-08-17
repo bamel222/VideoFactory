@@ -20,11 +20,29 @@ CARTOON_BEATS = [
     ("song_out", "Chanson de sortie", 12),
 ]
 
-SEGMENT_DURATION = 8  # seconds
+# Segment duration (seconds) per generation mode.
+# "images" -> stills long enough for Ken Burns; "video" -> short clips.
+SEGMENT_DURATION_BY_MODE = {"images": 12, "video": 10}
 
 
-def _build_scenes(db: Session, episode: Episode, kind: str) -> list[Scene]:
-    beats = DOC_BEATS if kind == "documentary" else CARTOON_BEATS
+def _beats_for(kind: str) -> list[tuple[str, str, int]]:
+    return DOC_BEATS if kind == "documentary" else CARTOON_BEATS
+
+
+def _scale_beats(kind: str, target_duration_seconds: int) -> list[tuple[str, str, int]]:
+    beats = _beats_for(kind)
+    total_weight = sum(d for _, _, d in beats)
+    scaled: list[tuple[str, str, int]] = []
+    for idx, (beat, title, weight) in enumerate(beats):
+        dur = round(target_duration_seconds * weight / total_weight)
+        if idx == len(beats) - 1:
+            dur = max(1, target_duration_seconds - sum(d for _, _, d in scaled))
+        scaled.append((beat, title, max(1, dur)))
+    return scaled
+
+
+def _build_scenes(db: Session, episode: Episode, kind: str, target_duration_seconds: int) -> list[Scene]:
+    beats = _scale_beats(kind, target_duration_seconds)
     scenes: list[Scene] = []
     for idx, (beat, title, duration) in enumerate(beats):
         if beat == "teaser" and episode.is_final:
@@ -43,14 +61,15 @@ def _build_scenes(db: Session, episode: Episode, kind: str) -> list[Scene]:
     return scenes
 
 
-def _build_segments(db: Session, scene: Scene) -> list[Segment]:
+def _build_segments(db: Session, scene: Scene, mode: str) -> list[Segment]:
+    seg_dur = SEGMENT_DURATION_BY_MODE.get(mode, 8)
     segments: list[Segment] = []
-    count = max(1, scene.duration_seconds // SEGMENT_DURATION)
+    count = max(1, scene.duration_seconds // seg_dur)
     for i in range(count):
         seg = Segment(
             scene_id=scene.id,
             order=i,
-            duration_seconds=SEGMENT_DURATION,
+            duration_seconds=seg_dur,
             content_type="visual",
             prompt=scene.description,
         )
@@ -66,6 +85,9 @@ def generate_plan(db: Session, series: Series, language: str = "fr", extra_langu
         pack = _create_continuity_pack(db, series)
         series.continuity_pack_id = pack.id
 
+    mode = series.effective_mode()
+    target_duration = max(24, series.duration_minutes or 26) * 60
+
     episodes = [ep for ep in series.episodes] if hasattr(series, "episodes") else []
     if not episodes:
         for n in range(1, series.planned_episodes + 1):
@@ -75,7 +97,7 @@ def generate_plan(db: Session, series: Series, language: str = "fr", extra_langu
                 title=f"Épisode {n}",
                 status="planned",
                 is_final=(n == series.planned_episodes),
-                target_duration_seconds=90,
+                target_duration_seconds=target_duration,
             )
             db.add(ep)
             db.flush()
@@ -87,10 +109,10 @@ def generate_plan(db: Session, series: Series, language: str = "fr", extra_langu
     db.add(run)
     db.flush()
     for ep in episodes:
-        scenes = _build_scenes(db, ep, series.kind)
+        scenes = _build_scenes(db, ep, series.kind, target_duration)
         for scene in scenes:
-            _build_segments(db, scene)
-        seq = _plan_episode_tasks(db, series, run, ep, seq, targets)
+            _build_segments(db, scene, mode)
+        seq = _plan_episode_tasks(db, series, run, ep, seq, targets, mode)
     run.total_tasks = seq
     db.commit()
     return series
@@ -168,27 +190,40 @@ def _create_continuity_pack(db: Session, series: Series) -> ContinuityPack:
     return pack
 
 
-def _plan_episode_tasks(db: Session, series: Series, run: JobRun, ep: Episode, seq: int, targets: list[str]) -> int:
+def _plan_episode_tasks(db: Session, series: Series, run: JobRun, ep: Episode, seq: int, targets: list[str], mode: str) -> int:
     pending: list[JobTask] = []
     scene_ids = [s.id for s in db.query(Scene).filter(Scene.episode_id == ep.id).order_by(Scene.order).all()]
     segment_ids = [
         s.id for s in db.query(Segment).filter(Segment.scene_id.in_(scene_ids)).order_by(Segment.id).all()
     ]
 
-    # Research / bible per episode
+    # Script / bible per episode
     if series.kind == "documentary":
         research = _add_task(db, run, series, "research", "research", ep.id, None, None, seq)
         seq += 1
-        fact_check = _add_task(db, run, series, "fact_check", "qa", ep.id, None, None, seq, [research.id])
-        seq += 1
-        script = _add_task(db, run, series, "script_episode", "script", ep.id, None, None, seq, [fact_check.id])
+        if series.fact_check_enabled:
+            fact_check = _add_task(db, run, series, "fact_check", "qa", ep.id, None, None, seq, [research.id])
+            seq += 1
+            script_dep = fact_check.id
+        else:
+            script_dep = research.id
+        script = _add_task(db, run, series, "script_episode", "script", ep.id, None, None, seq, [script_dep])
         seq += 1
         narration = _add_task(db, run, series, "narration", "script", ep.id, None, None, seq, [script.id])
         seq += 1
-        pending = [research, fact_check, script, narration]
+        # Main-language voiceover: narration text -> TTS audio
+        narration_tts = _add_task(db, run, series, "tts_voice", "audio", ep.id, None, None, seq, [narration.id],
+                                  {"subtype": "narration", "language": series.language})
+        seq += 1
+        pending = [research, script, narration, narration_tts]
     else:
         bible = _add_task(db, run, series, "plan_series", "research", ep.id, None, None, seq)
         seq += 1
+        fact_dep = [bible.id]
+        if series.fact_check_enabled:
+            fact_check = _add_task(db, run, series, "fact_check", "qa", ep.id, None, None, seq, [bible.id])
+            seq += 1
+            fact_dep.append(fact_check.id)
         char_sheet = _add_task(db, run, series, "image_generate", "image", ep.id, None, None, seq, [bible.id], {"subtype": "character_sheet"})
         seq += 1
         voice = _add_task(db, run, series, "tts_voice", "audio", ep.id, None, None, seq, [bible.id], {"subtype": "voice_identity"})
@@ -199,25 +234,34 @@ def _plan_episode_tasks(db: Session, series: Series, run: JobRun, ep: Episode, s
         seq += 1
         pending = [bible, char_sheet, voice, song_in, song_out]
 
-    # Per-segment media generation
+    # Per-segment media generation, chosen by (kind, mode)
+    if series.kind == "cartoon":
+        media_task_type = "video_generate" if mode == "video" else "image_generate"
+        media_role = "video" if mode == "video" else "image"
+    else:
+        media_task_type = "stock_video" if mode == "video" else "image_generate"
+        media_role = "video" if mode == "video" else "image"
+
     for sid in segment_ids:
         seg = db.get(Segment, sid)
-        role = "video" if series.kind == "cartoon" else "image"
-        task_type = "video_generate" if series.kind == "cartoon" else "image_generate"
-        media = _add_task(db, run, series, task_type, role, ep.id, seg.scene_id, sid, seq, [pending[-1].id])
+        media = _add_task(db, run, series, media_task_type, media_role, ep.id, seg.scene_id, sid, seq, [pending[-1].id],
+                          {"mode": mode, "prompt": seg.prompt})
         seq += 1
         pending.append(media)
 
-    clip = _add_task(db, run, series, "clip_assembly", "montage", ep.id, None, None, seq, [t.id for t in pending if t.task_type in ("image_generate", "video_generate")])
+    clip = _add_task(db, run, series, "clip_assembly", "montage", ep.id, None, None, seq,
+                     [t.id for t in pending if t.task_type in ("image_generate", "video_generate", "stock_video")],
+                     {"mode": mode})
     seq += 1
-    subtitles = _add_task(db, run, series, "subtitle", "script", ep.id, None, None, seq, [clip.id])
+    subtitles = _add_task(db, run, series, "subtitle", "script", ep.id, None, None, seq, [clip.id], {"language": series.language})
     seq += 1
-    final = _add_task(db, run, series, "final_assembly", "montage", ep.id, None, None, seq, [clip.id, subtitles.id])
+    final = _add_task(db, run, series, "final_assembly", "montage", ep.id, None, None, seq, [clip.id, subtitles.id], {"mode": mode})
     seq += 1
 
     # Localization per target language
     for lang in targets:
-        tr = _add_task(db, run, series, "translate", "translation", ep.id, None, None, seq, [narration.id if series.kind == "documentary" else bible.id], {"language": lang})
+        ref = narration.id if series.kind == "documentary" else bible.id
+        tr = _add_task(db, run, series, "translate", "translation", ep.id, None, None, seq, [ref], {"language": lang})
         seq += 1
         dub = _add_task(db, run, series, "tts_voice", "audio", ep.id, None, None, seq, [tr.id], {"language": lang, "subtype": "dub"})
         seq += 1

@@ -21,15 +21,21 @@ def _check(user: User, series: Series) -> Series:
     return series
 
 
+def _serialize(s: Series) -> dict:
+    return {
+        "id": s.id, "title": s.title, "topic": s.topic, "kind": s.kind,
+        "status": s.status, "planned_episodes": s.planned_episodes,
+        "language": s.language, "generation_mode": s.effective_mode(),
+        "duration_minutes": s.duration_minutes, "fact_check_enabled": s.fact_check_enabled,
+        "business_score": s.business_score,
+        "production_cost": s.production_cost, "continuity_pack_id": s.continuity_pack_id,
+    }
+
+
 @router.get("")
 def list_series(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return [
-        {
-            "id": s.id, "title": s.title, "topic": s.topic, "kind": s.kind,
-            "status": s.status, "planned_episodes": s.planned_episodes,
-            "language": s.language, "business_score": s.business_score,
-            "production_cost": s.production_cost, "continuity_pack_id": s.continuity_pack_id,
-        }
+        _serialize(s)
         for s in db.scalars(select(Series).where(Series.workspace_id == user.workspace_id).order_by(Series.id.desc())).all()
     ]
 
@@ -38,8 +44,9 @@ def list_series(db: Session = Depends(get_db), user: User = Depends(get_current_
 def create_series(body: SeriesCreate, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not require_permission(user.role, "series.manage"):
         raise HTTPException(403, "Owner or Admin only")
-    if body.kind not in ("documentary", "cartoon"):
-        raise HTTPException(400, "kind must be documentary or cartoon")
+    mode = body.generation_mode or ("images" if body.kind == "documentary" else "video")
+    # Documentary: fact-checking always enabled. Cartoon: only when based on real facts.
+    fact_check = body.based_on_facts if body.kind == "cartoon" else True
     series = Series(
         workspace_id=user.workspace_id,
         title=body.title,
@@ -47,14 +54,17 @@ def create_series(body: SeriesCreate, request: Request, db: Session = Depends(ge
         kind=body.kind,
         planned_episodes=max(1, body.planned_episodes),
         language=body.language,
+        generation_mode=mode,
+        duration_minutes=max(24, min(28, body.duration_minutes)),
+        fact_check_enabled=bool(fact_check),
     )
     db.add(series)
     db.flush()
     generate_plan(db, series, language=body.language)
     db.commit()
     db.refresh(series)
-    audit_log(db, user.id, "series.create", "series", series.id, {"title": series.title, "kind": series.kind}, request.client.host if request.client else None)
-    return {"id": series.id, "title": series.title, "kind": series.kind, "status": series.status}
+    audit_log(db, user.id, "series.create", "series", series.id, {"title": series.title, "kind": series.kind, "mode": mode}, request.client.host if request.client else None)
+    return _serialize(series)
 
 
 @router.get("/{series_id}")
@@ -73,7 +83,9 @@ def get_series(series_id: int, db: Session = Depends(get_db), user: User = Depen
         episodes.append({"id": ep.id, "number": ep.number, "title": ep.title, "status": ep.status, "is_final": ep.is_final, "scenes": scenes})
     return {
         "id": series.id, "title": series.title, "topic": series.topic, "kind": series.kind,
-        "status": series.status, "language": series.language, "business_score": series.business_score,
+        "status": series.status, "language": series.language, "generation_mode": series.effective_mode(),
+        "duration_minutes": series.duration_minutes, "fact_check_enabled": series.fact_check_enabled,
+        "business_score": series.business_score,
         "production_cost": series.production_cost, "episodes": episodes,
     }
 

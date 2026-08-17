@@ -21,9 +21,18 @@ class Series(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(30), default="planned")
     planned_episodes: Mapped[int] = mapped_column(Integer, default=1)
     language: Mapped[str] = mapped_column(String(10), default="fr")
+    generation_mode: Mapped[str] = mapped_column(String(20), default="")
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=26)
+    fact_check_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     continuity_pack_id: Mapped[int] = mapped_column(ForeignKey("continuity_packs.id"), nullable=True)
     business_score: Mapped[float] = mapped_column(default=0.0, nullable=False)
     production_cost: Mapped[float] = mapped_column(default=0.0, nullable=False)
+
+    def effective_mode(self) -> str:
+        """Resolve the generation mode, defaulting by kind for legacy records."""
+        if self.generation_mode in ("images", "video"):
+            return self.generation_mode
+        return "images" if self.kind == "documentary" else "video"
 
 
 class Episode(Base, TimestampMixin):

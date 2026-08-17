@@ -153,6 +153,7 @@ docker compose -f infra/docker-compose.deploy.yml ps
 | `CORS_ORIGINS` | Origines autorisées | `http://localhost:3000,http://localhost:3001` |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Supabase (Postgres/S3/Auth) | vides |
 | `OPENAI_API_KEY`, `DEEPL_API_KEY`, … | Clés des vrais providers | vides |
+| `MONTAGE_ENABLED` | Active le montage vidéo réel (ffmpeg) en fin de pipeline | `true` |
 
 ---
 
@@ -324,11 +325,30 @@ Dans **Séries & Pipelines**, remplissez :
   à la biodiversité des abysses, avec des interviews fictives et des images d'archives."*
 - **Type** : `Documentaire` ou `Cartoon` (pour les enfants, un pack de continuité
   avec personnages est généré automatiquement).
+- **Format de génération** (selon le type, voir la table ci-dessous).
+- **Durée / épisode** : entre **24 et 28 minutes** (défaut 26).
+- **Fact-checking** (cartoon uniquement) : cochez *"Basé sur des faits réels"*
+  pour inclure la vérification des faits dans le pipeline. Pour une fiction, laissez décoché.
 - **Épisodes** : entre 1 et 10.
 - **Langue** : `fr`, `en`, `es`, `de`, `it`, `pt`…
 
 Cliquez **Créer**. Le plan de série est généré automatiquement
 (bible, épisodes, scènes, segments, graphe de tâches).
+
+> Astuce : placez la souris sur les options du menu *Format de génération*
+> pour afficher une description détaillée de chaque mode.
+
+### Les 4 modes de génération
+
+| Type | Mode | Description |
+|---|---|---|
+| Documentaire | **Photo-Cinéma** (`images`) | Images fixes (12 s/image) animées en douceur avec un effet Ken Burns, narration, musique et sous-titres. Style cinématographique classique. |
+| Documentaire | **Vidéo Clip IA** (`video`) | Clips vidéo réels issus de banques d'images (Pexels/Pixabay) puis clips IA en secours. Rendu dynamique, proche d'un reportage. |
+| Cartoon | **Cartoon Clip IA** (`video`) | Clips vidéo animés générés par IA. Style 3D / animation fluide. |
+| Cartoon | **Cartoon 2D Animé** (`images`) | Images illustrées animées en 2D légère (déplacements, parallaxe des décors). Style dessin animé traditionnel, plus économique. |
+
+> Les documentaires sont **toujours fact-checkés** (chaque affirmation est sourcée).
+> Pour les cartoons, le fact-check n'est inclus que si vous cochez *"Basé sur des faits réels"*.
 
 **Étape 2 — Lancer le dry-run (sans frais).**
 
@@ -343,11 +363,15 @@ Dans la page de la série, cliquez **Dry run**. Vous obtenez un rapport :
 **Étape 3 — Lancer le pipeline réel.**
 
 Cliquez **Run**. Le master orchestrator exécute les tâches dans l'ordre du graphe :
-recherche → script → narration → TTS → musique → images → vidéo → montage → QA →
-licences → SEO → shorts → rapport de provenance.
+recherche → script → narration → TTS → musique → images/vidéo → **montage réel** (ffmpeg)
+→ QA → licences → SEO → shorts → rapport de provenance.
 
 - Les tâches réussies sont **checkpointées** (reprise possible après interruption).
 - Vous suivez la progression dans **Jobs**.
+- Le **montage réel** est actif par défaut (`MONTAGE_ENABLED=true`) : le pipeline assemble
+  les médias produits en une vraie vidéo d'épisode (Ken Burns, concaténation des clips,
+  mixage narration + musique, sous-titres brûlés). Pour désactiver le montage lourd
+  (utile dans certains environnements contraints), passez `MONTAGE_ENABLED=false`.
 
 **Étape 4 — Vérifier le Continuity Pack (cartoon).**
 
@@ -429,6 +453,7 @@ tag v1.0.0     → déclenche la production (workflow deploy.yml)
 | `502` sur le frontend | Le backend est arrêté : redémarrez uvicorn |
 | La publication est bloquée (409) | L'épisode n'est pas `approved` (ou le rôle n'est pas Owner) |
 | Images/vidéos "vides" | Les providers de ce rôle sont en `mock://` : configurez un vrai provider pour des médias réels |
+| La vidéo finale n'est pas montée | Vérifiez `MONTAGE_ENABLED=true` dans le `.env` backend et qu'ffmpeg est disponible (le binaire `imageio-ffmpeg` est utilisé) |
 | Le résumé du job ne bouge pas | Vérifiez Redis (`REDIS_URL`) et les logs du worker/backend |
 
 ---

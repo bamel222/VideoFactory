@@ -27,7 +27,7 @@ def _estimate_units(task: JobTask) -> float:
 
 def execute_task(db: Session, task: JobTask, provider: Provider) -> JobTask:
     """Run one task against a provider and persist a checkpoint. Idempotent via checkpoints."""
-    client = build_provider_client(provider)
+    client = build_provider_client(provider, db)
     result = client.generate(task)
 
     # Persist any produced file into the storage registry
@@ -68,7 +68,7 @@ def execute_task(db: Session, task: JobTask, provider: Provider) -> JobTask:
         prompt=json.dumps(task.payload, ensure_ascii=False),
         cost=cost,
         content_hash=content_hash,
-        metadata={"task_type": task.task_type},
+        metadata={"task_type": task.task_type, "local_path": path if isinstance(result, dict) and result.get("path") and os.path.exists(result.get("path")) else ""},
     )
 
     task.result = result
