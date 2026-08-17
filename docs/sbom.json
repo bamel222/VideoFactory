@@ -1,0 +1,1876 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "name": "video-factory-ai-sbom",
+  "documentNamespace": "https://video-factory.ai/sbom/a243403f70e38360eda375ecd652c7b82bab890f",
+  "created": "2026-08-16T11:34:46.061060+00:00",
+  "creator": [
+    "tool: video-factory-sbom"
+  ],
+  "packages": [
+    {
+      "name": "fastapi",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "uvicorn[standard]",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "sqlalchemy",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "pydantic",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "pydantic-settings",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "redis",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "fakeredis",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "PyJWT",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "bcrypt",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "cryptography",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "httpx",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "python-multipart",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "psycopg2-binary",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "pytest",
+      "version": "",
+      "packageManager": "pip"
+    },
+    {
+      "name": "@emnapi/core",
+      "version": "1.10.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@emnapi/runtime",
+      "version": "1.10.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@emnapi/wasi-threads",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@eslint-community/eslint-utils",
+      "version": "4.10.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@eslint-community/regexpp",
+      "version": "4.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@eslint/eslintrc",
+      "version": "2.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@eslint/js",
+      "version": "8.57.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@humanwhocodes/config-array",
+      "version": "0.13.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@humanwhocodes/module-importer",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@humanwhocodes/object-schema",
+      "version": "2.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@isaacs/cliui",
+      "version": "8.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@isaacs/cliui/node_modules/ansi-regex",
+      "version": "6.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@isaacs/cliui/node_modules/strip-ansi",
+      "version": "7.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@napi-rs/wasm-runtime",
+      "version": "1.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/env",
+      "version": "14.2.35",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/eslint-plugin-next",
+      "version": "14.2.35",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-darwin-arm64",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-darwin-x64",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-linux-arm64-gnu",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-linux-arm64-musl",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-linux-x64-gnu",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-linux-x64-musl",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-win32-arm64-msvc",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-win32-ia32-msvc",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@next/swc-win32-x64-msvc",
+      "version": "14.2.33",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@nodelib/fs.scandir",
+      "version": "2.1.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@nodelib/fs.stat",
+      "version": "2.0.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@nodelib/fs.walk",
+      "version": "1.2.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@nolyfill/is-core-module",
+      "version": "1.0.39",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@pkgjs/parseargs",
+      "version": "0.11.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@rtsao/scc",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@rushstack/eslint-patch",
+      "version": "1.16.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@swc/counter",
+      "version": "0.1.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@swc/helpers",
+      "version": "0.5.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@tybys/wasm-util",
+      "version": "0.10.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@types/json5",
+      "version": "0.0.29",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/eslint-plugin",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/eslint-plugin/node_modules/ignore",
+      "version": "7.0.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/parser",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/project-service",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/scope-manager",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/tsconfig-utils",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/type-utils",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/types",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/typescript-estree",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/typescript-estree/node_modules/balanced-match",
+      "version": "4.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/typescript-estree/node_modules/brace-expansion",
+      "version": "5.0.9",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/typescript-estree/node_modules/minimatch",
+      "version": "10.2.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/utils",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/visitor-keys",
+      "version": "8.67.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@typescript-eslint/visitor-keys/node_modules/eslint-visitor-keys",
+      "version": "5.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@ungap/structured-clone",
+      "version": "1.3.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-android-arm-eabi",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-android-arm64",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-darwin-arm64",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-darwin-x64",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-freebsd-x64",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-arm-gnueabihf",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-arm-musleabihf",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-arm64-gnu",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-arm64-musl",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-loong64-gnu",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-loong64-musl",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-ppc64-gnu",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-riscv64-gnu",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-riscv64-musl",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-s390x-gnu",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-x64-gnu",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-linux-x64-musl",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-openharmony-arm64",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-wasm32-wasi",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-win32-arm64-msvc",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-win32-ia32-msvc",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "@unrs/resolver-binding-win32-x64-msvc",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "acorn",
+      "version": "8.18.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "acorn-jsx",
+      "version": "5.3.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ajv",
+      "version": "6.15.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ansi-regex",
+      "version": "5.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ansi-styles",
+      "version": "4.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "argparse",
+      "version": "2.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "aria-query",
+      "version": "5.3.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array-buffer-byte-length",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array-includes",
+      "version": "3.1.9",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array.prototype.findlast",
+      "version": "1.2.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array.prototype.findlastindex",
+      "version": "1.2.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array.prototype.flat",
+      "version": "1.3.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array.prototype.flatmap",
+      "version": "1.3.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "array.prototype.tosorted",
+      "version": "1.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "arraybuffer.prototype.slice",
+      "version": "1.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ast-types-flow",
+      "version": "0.0.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "async-function",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "available-typed-arrays",
+      "version": "1.0.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "axe-core",
+      "version": "4.13.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "axobject-query",
+      "version": "4.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "balanced-match",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "brace-expansion",
+      "version": "1.1.18",
+      "packageManager": "npm"
+    },
+    {
+      "name": "busboy",
+      "version": "1.6.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "call-bind",
+      "version": "1.0.9",
+      "packageManager": "npm"
+    },
+    {
+      "name": "call-bind-apply-helpers",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "call-bound",
+      "version": "1.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "callsites",
+      "version": "3.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "caniuse-lite",
+      "version": "1.0.30001809",
+      "packageManager": "npm"
+    },
+    {
+      "name": "chalk",
+      "version": "4.1.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "client-only",
+      "version": "0.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "color-convert",
+      "version": "2.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "color-name",
+      "version": "1.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "concat-map",
+      "version": "0.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "cross-spawn",
+      "version": "7.0.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "amerau-levenshtein",
+      "version": "1.0.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ata-view-buffer",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ata-view-byte-length",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ata-view-byte-offset",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bug",
+      "version": "4.4.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "p-is",
+      "version": "0.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fine-data-property",
+      "version": "1.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fine-properties",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ctrine",
+      "version": "3.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "r-proto",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "astasianwidth",
+      "version": "0.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ji-regex",
+      "version": "9.2.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-abstract",
+      "version": "1.24.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-abstract-get",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-define-property",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-errors",
+      "version": "1.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-iterator-helpers",
+      "version": "1.4.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-object-atoms",
+      "version": "1.1.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-set-tostringtag",
+      "version": "2.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-shim-unscopables",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-to-primitive",
+      "version": "1.3.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "cape-string-regexp",
+      "version": "4.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int",
+      "version": "8.57.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-config-next",
+      "version": "14.2.35",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-import-resolver-node",
+      "version": "0.3.10",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-import-resolver-node/node_modules/debug",
+      "version": "3.2.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-import-resolver-typescript",
+      "version": "3.10.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-module-utils",
+      "version": "2.14.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-module-utils/node_modules/debug",
+      "version": "3.2.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-import",
+      "version": "2.32.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-import/node_modules/debug",
+      "version": "3.2.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-import/node_modules/doctrine",
+      "version": "2.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-import/node_modules/semver",
+      "version": "6.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-jsx-a11y",
+      "version": "6.10.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-react",
+      "version": "7.37.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-react-hooks",
+      "version": "5.0.0-canary-7118f5dd7-20230705",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-react/node_modules/doctrine",
+      "version": "2.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-plugin-react/node_modules/semver",
+      "version": "6.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-scope",
+      "version": "7.2.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "int-visitor-keys",
+      "version": "3.4.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "pree",
+      "version": "9.6.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "query",
+      "version": "1.7.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "recurse",
+      "version": "4.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "traverse",
+      "version": "5.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tils",
+      "version": "2.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fast-deep-equal",
+      "version": "3.1.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fast-json-stable-stringify",
+      "version": "2.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fast-levenshtein",
+      "version": "2.0.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fastq",
+      "version": "1.20.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fdir",
+      "version": "6.5.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "file-entry-cache",
+      "version": "6.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "find-up",
+      "version": "5.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "flat-cache",
+      "version": "3.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "flatted",
+      "version": "3.4.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "for-each",
+      "version": "0.3.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "foreground-child",
+      "version": "3.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "fs.realpath",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "function-bind",
+      "version": "1.1.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "function.prototype.name",
+      "version": "1.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "functions-have-names",
+      "version": "1.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "generator-function",
+      "version": "2.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "get-intrinsic",
+      "version": "1.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "get-proto",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "get-symbol-description",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "get-tsconfig",
+      "version": "4.14.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "glob",
+      "version": "10.3.10",
+      "packageManager": "npm"
+    },
+    {
+      "name": "glob-parent",
+      "version": "6.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "glob/node_modules/brace-expansion",
+      "version": "2.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "glob/node_modules/minimatch",
+      "version": "9.0.9",
+      "packageManager": "npm"
+    },
+    {
+      "name": "globals",
+      "version": "13.24.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "globalthis",
+      "version": "1.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "gopd",
+      "version": "1.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "packageManager": "npm"
+    },
+    {
+      "name": "graphemer",
+      "version": "1.4.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "has-bigints",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "has-flag",
+      "version": "4.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "has-property-descriptors",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "has-proto",
+      "version": "1.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "has-symbols",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "has-tostringtag",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "hasown",
+      "version": "2.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ignore",
+      "version": "5.3.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "import-fresh",
+      "version": "3.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "imurmurhash",
+      "version": "0.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "inflight",
+      "version": "1.0.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "internal-slot",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-array-buffer",
+      "version": "3.0.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-async-function",
+      "version": "2.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-bigint",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-boolean-object",
+      "version": "1.2.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-bun-module",
+      "version": "2.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-callable",
+      "version": "1.2.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-core-module",
+      "version": "2.16.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-data-view",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-date-object",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-document.all",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-extglob",
+      "version": "2.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-finalizationregistry",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-fullwidth-code-point",
+      "version": "3.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-generator-function",
+      "version": "1.1.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-glob",
+      "version": "4.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-map",
+      "version": "2.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-negative-zero",
+      "version": "2.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-number-object",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-path-inside",
+      "version": "3.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-regex",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-set",
+      "version": "2.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-shared-array-buffer",
+      "version": "1.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-string",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-symbol",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-typed-array",
+      "version": "1.1.15",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-weakmap",
+      "version": "2.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-weakref",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "is-weakset",
+      "version": "2.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "isarray",
+      "version": "2.0.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "isexe",
+      "version": "2.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "iterator.prototype",
+      "version": "1.1.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "jackspeak",
+      "version": "2.3.6",
+      "packageManager": "npm"
+    },
+    {
+      "name": "js-tokens",
+      "version": "4.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "js-yaml",
+      "version": "4.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "json-buffer",
+      "version": "3.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "json-schema-traverse",
+      "version": "0.4.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "json-stable-stringify-without-jsonify",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "json5",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "jsx-ast-utils",
+      "version": "3.3.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "keyv",
+      "version": "4.5.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "anguage-subtag-registry",
+      "version": "0.3.23",
+      "packageManager": "npm"
+    },
+    {
+      "name": "anguage-tags",
+      "version": "1.0.9",
+      "packageManager": "npm"
+    },
+    {
+      "name": "vn",
+      "version": "0.4.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "cate-path",
+      "version": "6.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ash.merge",
+      "version": "4.6.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-envify",
+      "version": "1.4.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ru-cache",
+      "version": "10.4.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ath-intrinsics",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "inimatch",
+      "version": "3.1.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "inimist",
+      "version": "1.2.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "inipass",
+      "version": "7.1.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "",
+      "version": "2.1.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "anoid",
+      "version": "3.3.18",
+      "packageManager": "npm"
+    },
+    {
+      "name": "api-postinstall",
+      "version": "0.3.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "atural-compare",
+      "version": "1.4.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "xt",
+      "version": "14.2.35",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-exports-info",
+      "version": "1.6.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "-exports-info/node_modules/semver",
+      "version": "6.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject-assign",
+      "version": "4.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject-inspect",
+      "version": "1.13.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject-keys",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject.assign",
+      "version": "4.1.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject.entries",
+      "version": "1.1.9",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject.fromentries",
+      "version": "2.0.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject.groupby",
+      "version": "1.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "bject.values",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ce",
+      "version": "1.4.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ptionator",
+      "version": "0.9.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wn-keys",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "p-limit",
+      "version": "3.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "p-locate",
+      "version": "5.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "parent-module",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "path-exists",
+      "version": "4.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "path-is-absolute",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "path-key",
+      "version": "3.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "path-parse",
+      "version": "1.0.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "path-scurry",
+      "version": "1.11.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "picocolors",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "picomatch",
+      "version": "4.0.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "possible-typed-array-names",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "postcss",
+      "version": "8.4.31",
+      "packageManager": "npm"
+    },
+    {
+      "name": "prelude-ls",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "prop-types",
+      "version": "15.8.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "punycode",
+      "version": "2.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "queue-microtask",
+      "version": "1.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "react",
+      "version": "18.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "react-dom",
+      "version": "18.3.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "react-is",
+      "version": "16.13.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "reflect.getprototypeof",
+      "version": "1.0.10",
+      "packageManager": "npm"
+    },
+    {
+      "name": "regexp.prototype.flags",
+      "version": "1.5.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "resolve",
+      "version": "2.0.0-next.7",
+      "packageManager": "npm"
+    },
+    {
+      "name": "resolve-from",
+      "version": "4.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "resolve-pkg-maps",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "reusify",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "rimraf",
+      "version": "3.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "rimraf/node_modules/glob",
+      "version": "7.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "run-parallel",
+      "version": "1.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "afe-array-concat",
+      "version": "1.1.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "afe-push-apply",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "afe-regex-test",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "cheduler",
+      "version": "0.23.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ver",
+      "version": "7.8.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "t-function-length",
+      "version": "1.2.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "t-function-name",
+      "version": "2.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "t-proto",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "hebang-command",
+      "version": "2.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "hebang-regex",
+      "version": "3.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ide-channel",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ide-channel-list",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ide-channel-map",
+      "version": "1.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ide-channel-weakmap",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ignal-exit",
+      "version": "4.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "rce-map-js",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "table-hash",
+      "version": "0.0.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "top-iteration-iterator",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "treamsearch",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring-width",
+      "version": "5.1.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring-width-cjs",
+      "version": "4.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring-width-cjs/node_modules/emoji-regex",
+      "version": "8.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring-width/node_modules/ansi-regex",
+      "version": "6.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring-width/node_modules/strip-ansi",
+      "version": "7.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring.prototype.includes",
+      "version": "2.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring.prototype.matchall",
+      "version": "4.0.12",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring.prototype.repeat",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring.prototype.trim",
+      "version": "1.2.11",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring.prototype.trimend",
+      "version": "1.0.10",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tring.prototype.trimstart",
+      "version": "1.0.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "trip-ansi",
+      "version": "6.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "trip-ansi-cjs",
+      "version": "6.0.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "trip-bom",
+      "version": "3.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "trip-json-comments",
+      "version": "3.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tyled-jsx",
+      "version": "5.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "pports-color",
+      "version": "7.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "pports-preserve-symlinks-flag",
+      "version": "1.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "text-table",
+      "version": "0.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ts-api-utils",
+      "version": "2.5.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tsconfig-paths",
+      "version": "3.15.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "tslib",
+      "version": "2.8.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "type-check",
+      "version": "0.4.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "type-fest",
+      "version": "0.20.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "typed-array-buffer",
+      "version": "1.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "typed-array-byte-length",
+      "version": "1.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "typed-array-byte-offset",
+      "version": "1.0.4",
+      "packageManager": "npm"
+    },
+    {
+      "name": "typed-array-length",
+      "version": "1.0.8",
+      "packageManager": "npm"
+    },
+    {
+      "name": "typescript",
+      "version": "6.0.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "box-primitive",
+      "version": "1.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "rs-resolver",
+      "version": "1.12.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "ri-js",
+      "version": "4.4.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "which",
+      "version": "2.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "which-boxed-primitive",
+      "version": "1.1.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "which-builtin-type",
+      "version": "1.2.1",
+      "packageManager": "npm"
+    },
+    {
+      "name": "which-collection",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "which-typed-array",
+      "version": "1.1.22",
+      "packageManager": "npm"
+    },
+    {
+      "name": "word-wrap",
+      "version": "1.2.5",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi",
+      "version": "8.1.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi-cjs",
+      "version": "7.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi-cjs/node_modules/emoji-regex",
+      "version": "8.0.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi-cjs/node_modules/string-width",
+      "version": "4.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi/node_modules/ansi-regex",
+      "version": "6.3.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi/node_modules/ansi-styles",
+      "version": "6.2.3",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrap-ansi/node_modules/strip-ansi",
+      "version": "7.2.0",
+      "packageManager": "npm"
+    },
+    {
+      "name": "wrappy",
+      "version": "1.0.2",
+      "packageManager": "npm"
+    },
+    {
+      "name": "yocto-queue",
+      "version": "0.1.0",
+      "packageManager": "npm"
+    }
+  ]
+}

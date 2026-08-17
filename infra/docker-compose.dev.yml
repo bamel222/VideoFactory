@@ -1,0 +1,63 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vfactory
+      POSTGRES_PASSWORD: vfactory
+      POSTGRES_DB: video_factory
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../supabase/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vfactory"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      DATABASE_URL: postgresql+psycopg2://vfactory:vfactory@postgres:5432/video_factory
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: /api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

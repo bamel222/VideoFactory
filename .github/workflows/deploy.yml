@@ -1,0 +1,21 @@
+name: deploy
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker compose -f infra/docker-compose.deploy.yml build
+      - name: Push to registry
+        run: |
+          echo "Push images to your container registry (configure env here)"
+      - name: Deploy
+        run: |
+          echo "Deploy to target host via ssh or registry webhook (configure here)"

@@ -1,0 +1,45 @@
+name: dev
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: pip install pip-audit
+      - name: Scan de dépendances
+        run: pip-audit
+      - name: Tests
+        run: python -m pytest tests -q
+      - name: Génération SBOM
+        run: python -m app.scripts.sbom
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: docs/sbom.json
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm audit --omit=dev
+      - run: npm run build
