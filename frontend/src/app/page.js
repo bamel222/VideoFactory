@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setSession, getToken } from "@/lib/api";
+import { Field } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,8 +27,15 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Erreur de connexion");
+      if (!res.ok) {
+        throw new Error(typeof data.detail === "string" ? data.detail : "Erreur de connexion");
+      }
       setSession(data.access_token, data.role, data.email);
+      if (data.password_expired) {
+        window.localStorage.setItem("vf_pw_expired", "1");
+      } else {
+        window.localStorage.removeItem("vf_pw_expired");
+      }
       router.replace("/dashboard");
     } catch (err) {
       setError(err.message);
@@ -38,24 +46,31 @@ export default function LoginPage() {
 
   return (
     <div className="login-wrap">
+      <div className="login-glow"></div>
       <div className="card login-card">
-        <div className="brand"><span className="dot"></span> Video Factory AI</div>
-        <h1>Connexion</h1>
-        <p className="muted">Comptes de démo : owner@vf.ai / admin@vf.ai / reviewer@vf.ai — mot de passe : password123</p>
+        <div className="brand mb">
+          <div className="brand-logo">VF</div>
+          <span>Video Factory AI</span>
+        </div>
+        <h1 style={{ fontSize: 20 }}>Connexion</h1>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Usine vidéo multi-agents — documentaires multilingues et cartoons enfants.
+        </p>
         {error && <div className="error">{error}</div>}
         <form onSubmit={login}>
-          <div className="field">
-            <label>Email</label>
+          <Field label="Email">
             <input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-          </div>
-          <div className="field">
-            <label>Mot de passe</label>
+          </Field>
+          <Field label="Mot de passe">
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
-          </div>
+          </Field>
           <button type="submit" disabled={loading} style={{ width: "100%" }}>
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
+        <div className="mt faint" style={{ fontSize: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+          Comptes de démo : owner@vf.ai / admin@vf.ai / reviewer@vf.ai — mot de passe : password123
+        </div>
       </div>
     </div>
   );

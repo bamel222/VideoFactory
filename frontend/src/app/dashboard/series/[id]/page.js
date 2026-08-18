@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Skeleton, useToast } from "@/components/ui";
 
 const MODE_LABELS = {
   documentary: { images: "Photo-Cinéma", video: "Vidéo Clip IA" },
@@ -26,8 +27,8 @@ export default function SeriesDetailPage() {
   const [checkpoints, setCheckpoints] = useState([]);
   const [pack, setPack] = useState(null);
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const { toast, toastError } = useToast();
 
   const load = async () => {
     try {
@@ -40,7 +41,7 @@ export default function SeriesDetailPage() {
       setCheckpoints(cps);
       setPack(p);
     } catch (e) {
-      setError(e.message);
+      toastError(e.message);
     }
   };
 
@@ -49,15 +50,14 @@ export default function SeriesDetailPage() {
 
   async function run(dry) {
     setError("");
-    setMsg("");
     setBusy(true);
     try {
       const r = dry
         ? await api(`/series/${id}/dry-run`, { method: "POST" })
         : await api(`/series/${id}/run`, { method: "POST", body: JSON.stringify({ series_id: Number(id), dry_run: false }) });
-      setMsg(dry
-        ? `Dry run: ${r.report.ready_to_launch ? "prêt" : "risques"} — ${r.report.tasks} tâches, coût $${r.report.budget.estimated_cost}`
-        : `Pipeline: ${r.done_tasks}/${r.total_tasks}, statut ${r.status}`);
+      toast(dry
+        ? `Dry run : ${r.report.ready_to_launch ? "prêt" : "risques"} — ${r.report.tasks} tâches, coût $${r.report.budget.estimated_cost}`
+        : `Pipeline : ${r.done_tasks}/${r.total_tasks}, statut ${r.status}`);
       await load();
     } catch (err) {
       setError(err.message);
@@ -66,27 +66,41 @@ export default function SeriesDetailPage() {
     }
   }
 
-  if (!series) return <div className="muted">Chargement...</div>;
+  if (!series) {
+    return (
+      <div>
+        <Skeleton className="title" style={{ width: 220, marginBottom: 16 }} />
+        <Skeleton className="row-lg" />
+        <Skeleton className="card mt" style={{ marginTop: 16 }} />
+        <Skeleton className="card mt" style={{ marginTop: 16 }} />
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="row mb">
-        <Link href="/dashboard/series" className="muted">← Retour</Link>
-        <h1 style={{ margin: 0 }}>{series.title}</h1>
-        <StatusBadge status={series.status} />
-        <span className="badge blue">{series.kind}</span>
-        <span className="badge gray">{MODE_LABELS[series.kind]?.[series.generation_mode] || series.generation_mode}</span>
-        <span className="badge blue">{series.duration_minutes || 26} min / ép.</span>
-        {series.fact_check_enabled && <span className="badge yellow">Fact-check actif</span>}
-        <span className="muted">{series.language}</span>
+      <div className="topbar">
+        <div>
+          <div className="subtitle" style={{ marginBottom: 4 }}>
+            <Link href="/dashboard/series" className="muted">Séries & Pipelines</Link>
+          </div>
+          <div className="row gap">
+            <h1 style={{ margin: 0 }}>{series.title}</h1>
+            <StatusBadge status={series.status} />
+            <span className="badge blue">{series.kind}</span>
+            <span className="badge gray">{MODE_LABELS[series.kind]?.[series.generation_mode] || series.generation_mode}</span>
+            <span className="badge blue">{series.duration_minutes || 26} min / ép.</span>
+            {series.fact_check_enabled && <span className="badge yellow">Fact-check actif</span>}
+            <span className="badge gray">{series.language}</span>
+          </div>
+        </div>
+        <div className="row">
+          <button className="secondary" disabled={busy} onClick={() => run(true)}>{busy ? "..." : "Dry Run"}</button>
+          <button disabled={busy} onClick={() => run(false)}>{busy ? "..." : "Lancer la production"}</button>
+        </div>
       </div>
-      {error && <div className="error">{error}</div>}
-      {msg && <div className="success">{msg}</div>}
 
-      <div className="row mb">
-        <button className="secondary" disabled={busy} onClick={() => run(true)}>Dry Run</button>
-        <button disabled={busy} onClick={() => run(false)}>Lancer la production</button>
-      </div>
+      {error && <div className="error">{error}</div>}
 
       {series.episodes.map((ep) => (
         <div className="card mb" key={ep.id}>

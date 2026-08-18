@@ -61,6 +61,9 @@ _SQLITE_ADD_COLUMNS = {
         ("duration_minutes", "INTEGER DEFAULT 26"),
         ("fact_check_enabled", "BOOLEAN DEFAULT 1"),
     ],
+    "users": [
+        ("password_changed_at", "DATETIME"),
+    ],
 }
 
 

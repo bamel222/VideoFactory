@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, can } from "@/lib/api";
+import { PageHeader, SkeletonRows, useToast } from "@/components/ui";
 
 function StatusBadge({ s }) {
   const map = { review: "yellow", approved: "green", published: "green", produced: "blue", planned: "gray" };
@@ -9,20 +10,26 @@ function StatusBadge({ s }) {
 }
 
 export default function ReviewPage() {
-  const [queue, setQueue] = useState([]);
+  const [queue, setQueue] = useState(null);
   const [selected, setSelected] = useState(null);
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState("");
+  const { toast, toastError } = useToast();
 
   const load = async () => {
-    try { setQueue(await api("/review/queue")); } catch (e) { setError(e.message); }
+    try {
+      setQueue(await api("/review/queue"));
+    } catch (e) {
+      toastError(e.message);
+    }
   };
   useEffect(() => { load(); }, []);
 
   async function open(episodeId) {
-    setError(""); setMsg("");
-    try { setSelected(await api(`/review/episodes/${episodeId}`)); } catch (e) { setError(e.message); }
+    setError("");
+    try {
+      setSelected(await api(`/review/episodes/${episodeId}`));
+    } catch (e) { setError(e.message); }
   }
 
   async function decide(status) {
@@ -32,7 +39,7 @@ export default function ReviewPage() {
         method: "POST",
         body: JSON.stringify({ status, comment }),
       });
-      setMsg(status === "approved" ? "Épisode approuvé" : "Révision demandée");
+      toast(status === "approved" ? "Épisode approuvé" : "Révision demandée");
       setComment("");
       await open(selected.episode.id);
       await load();
@@ -43,7 +50,7 @@ export default function ReviewPage() {
     setError("");
     try {
       const r = await api(`/publishing/episodes/${selected.episode.id}`, { method: "POST" });
-      setMsg(`Publié (${r.licences_checked} licences vérifiées)`);
+      toast(`Publié (${r.licences_checked} licences vérifiées)`);
       await open(selected.episode.id);
       await load();
     } catch (e) { setError(e.message); }
@@ -51,39 +58,47 @@ export default function ReviewPage() {
 
   return (
     <div>
-      <h1>Review & Publication</h1>
-      {error && <div className="error">{error}</div>}
-      {msg && <div className="success">{msg}</div>}
+      <PageHeader title="Review & Publication" subtitle="Validez la qualité des épisodes puis publiez (Owner)." />
 
-      <table className="table mb">
-        <thead>
-          <tr><th>Épisode</th><th>Série</th><th>Statut</th><th>Final</th><th></th></tr>
-        </thead>
-        <tbody>
-          {queue.map((e) => (
-            <tr key={e.episode_id}>
-              <td>#{e.episode_id} — {e.title}</td>
-              <td>{e.series_id}</td>
-              <td><StatusBadge s={e.status} /></td>
-              <td>{e.is_final ? "oui" : "non"}</td>
-              <td><button className="small secondary" onClick={() => open(e.episode_id)}>Ouvrir</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {error && <div className="error">{error}</div>}
+
+      {!queue ? (
+        <SkeletonRows rows={4} cols={5} />
+      ) : (
+        <div className="table-wrap mb">
+          <table className="table">
+            <thead>
+              <tr><th>Épisode</th><th>Série</th><th>Statut</th><th>Final</th><th></th></tr>
+            </thead>
+            <tbody>
+              {queue.map((e) => (
+                <tr key={e.episode_id}>
+                  <td>#{e.episode_id} — {e.title}</td>
+                  <td>{e.series_id}</td>
+                  <td><StatusBadge s={e.status} /></td>
+                  <td>{e.is_final ? "oui" : "non"}</td>
+                  <td><button className="small secondary" onClick={() => open(e.episode_id)}>Ouvrir</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selected && (
         <div className="card">
-          <div className="row mb">
-            <h2 style={{ margin: 0 }}>Épisode #{selected.episode.id} — {selected.episode.title}</h2>
-            <StatusBadge s={selected.episode.status} />
+          <div className="row between mb">
+            <div className="row gap">
+              <h2 style={{ margin: 0 }}>Épisode #{selected.episode.id} — {selected.episode.title}</h2>
+              <StatusBadge s={selected.episode.status} />
+            </div>
             <button className="small secondary" onClick={() => setSelected(null)}>Fermer</button>
           </div>
 
           <div className="grid">
             <div>
               <h3>Narration</h3>
-              <p>{selected.episode.narration || "—"}</p>
+              <p className="muted">{selected.episode.narration || "—"}</p>
             </div>
             <div>
               <h3>Script</h3>
@@ -106,13 +121,15 @@ export default function ReviewPage() {
           {selected.shorts.length > 0 && (
             <div className="mb">
               <h3>Shorts par plateforme</h3>
-              <table className="table">
-                <tbody>
-                  {selected.shorts.map((s, i) => (
-                    <tr key={i}><td>{s.platform}</td><td>{s.captions}</td><td>{s.cta}</td><td>{s.asset_path || "—"}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-wrap">
+                <table className="table">
+                  <tbody>
+                    {selected.shorts.map((s, i) => (
+                      <tr key={i}><td>{s.platform}</td><td>{s.captions}</td><td>{s.cta}</td><td>{s.asset_path || "—"}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -135,20 +152,22 @@ export default function ReviewPage() {
           {selected.history.length > 0 && (
             <div className="mt">
               <h3>Historique de validation</h3>
-              <table className="table">
-                <thead><tr><th>Version</th><th>Statut</th><th>Commentaire</th><th>Utilisateur</th><th>Date</th></tr></thead>
-                <tbody>
-                  {selected.history.map((h, i) => (
-                    <tr key={i}>
-                      <td>{h.version}</td>
-                      <td><span className={`badge ${h.status === "approved" ? "green" : "yellow"}`}>{h.status}</span></td>
-                      <td>{h.comment || "—"}</td>
-                      <td>{h.user_id}</td>
-                      <td className="muted">{new Date(h.created_at).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead><tr><th>Version</th><th>Statut</th><th>Commentaire</th><th>Utilisateur</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {selected.history.map((h, i) => (
+                      <tr key={i}>
+                        <td>{h.version}</td>
+                        <td><span className={`badge ${h.status === "approved" ? "green" : "yellow"}`}>{h.status}</span></td>
+                        <td>{h.comment || "—"}</td>
+                        <td>{h.user_id}</td>
+                        <td className="muted">{new Date(h.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

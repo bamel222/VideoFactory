@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.audit import audit_log
-from app.core.filevalidation import sanitize_filename, validate_file_upload
+from app.core.filevalidation import deep_validate_media, sanitize_filename, validate_file_upload
 from app.core.security import require_permission
 from app.models import Asset, User
 from app.registries.storage_registry import StorageRegistry
@@ -72,6 +72,7 @@ async def upload_asset(file: UploadFile, db: Session = Depends(get_db), user: Us
     filename = sanitize_filename(file.filename or "asset.bin")
     try:
         meta = validate_file_upload(filename, data)
+        deep_validate_media(data, meta["extension"])
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     rel = f"upload/{user.workspace_id}/{filename}"

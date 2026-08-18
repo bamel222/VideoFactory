@@ -16,11 +16,13 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     encryption_key: str = "change-me-32-bytes-min-secret-key"
+    encryption_keys: str = ""
     jwt_secret: str = "change-me-jwt-secret"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
     cors_origins: str = "http://localhost:3000,http://localhost:3001"
+    cors_allow_credentials: bool = True
 
     supabase_enabled: bool = False
     supabase_url: str = ""
@@ -32,6 +34,25 @@ class Settings(BaseSettings):
     max_payload_bytes: int = 10 * 1024 * 1024
     max_upload_mb: int = 200
     allowed_extensions: str = "mp4,mov,webm,mp3,wav,ogg,jpg,jpeg,png,webp,srt,vtt,json,txt,ttf,otf,zip"
+
+    # Password policy
+    password_min_length: int = 12
+    password_require_upper: bool = True
+    password_require_lower: bool = True
+    password_require_digit: bool = True
+    password_require_symbol: bool = False
+    password_max_age_days: int = 90
+    password_history_size: int = 5
+
+    # Login brute-force protection
+    login_max_failures: int = 5
+    login_lockout_seconds: int = 900
+    login_rate_limit: int = 10
+    login_rate_window_seconds: int = 60
+
+    # Deep media validation
+    max_image_pixels: int = 40_000_000
+    max_media_seconds: int = 600
 
     # Provider keys come from env at runtime (never stored in settings)
     openai_api_key: str = ""

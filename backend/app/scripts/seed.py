@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import datetime as dt
+
 from sqlalchemy import func, select
 
 from app.core.db import SessionLocal, init_db
 from app.core.security import hash_password
-from app.models import User, Workspace
+from app.models import PasswordHistory, User, Workspace
 from app.registries.provider_registry import seed_fake_providers
 from app.registries.storage_registry import StorageRegistry
 
@@ -21,11 +23,14 @@ def run() -> None:
     db.add(ws)
     db.flush()
 
-    owner = User(email="owner@vf.ai", name="Owner", hashed_password=hash_password("password123"), role="owner", workspace_id=ws.id)
-    admin = User(email="admin@vf.ai", name="Admin", hashed_password=hash_password("password123"), role="admin", workspace_id=ws.id)
-    reviewer = User(email="reviewer@vf.ai", name="Reviewer", hashed_password=hash_password("password123"), role="reviewer", workspace_id=ws.id)
+    now = dt.datetime.now(dt.timezone.utc)
+    owner = User(email="owner@vf.ai", name="Owner", hashed_password=hash_password("password123"), role="owner", workspace_id=ws.id, password_changed_at=now)
+    admin = User(email="admin@vf.ai", name="Admin", hashed_password=hash_password("password123"), role="admin", workspace_id=ws.id, password_changed_at=now)
+    reviewer = User(email="reviewer@vf.ai", name="Reviewer", hashed_password=hash_password("password123"), role="reviewer", workspace_id=ws.id, password_changed_at=now)
     db.add_all([owner, admin, reviewer])
     db.flush()
+    for u in (owner, admin, reviewer):
+        db.add(PasswordHistory(user_id=u.id, hashed_password=u.hashed_password))
     ws.owner_id = owner.id
 
     seed_fake_providers(db, ws.id)

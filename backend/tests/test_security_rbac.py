@@ -48,14 +48,14 @@ def test_rbac_reviewer_cannot_create_provider(client, reviewer_token):
 def test_rbac_owner_can_manage_users(client, owner_token, admin_token):
     r = client.post(
         "/api/v1/users",
-        json={"email": "new@vf.ai", "name": "New", "password": "password123", "role": "reviewer"},
+        json={"email": "new@vf.ai", "name": "New", "password": "Str0ng-Passw0rd-2026!", "role": "reviewer"},
         headers={"Authorization": f"Bearer {owner_token}"},
     )
     assert r.status_code == 200, r.text
     # Admin cannot create users (roles.manage is owner-only)
     r2 = client.post(
         "/api/v1/users",
-        json={"email": "other@vf.ai", "name": "Other", "password": "password123", "role": "reviewer"},
+        json={"email": "other@vf.ai", "name": "Other", "password": "Str0ng-Passw0rd-2026!", "role": "reviewer"},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert r2.status_code == 403

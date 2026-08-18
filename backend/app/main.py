@@ -23,13 +23,17 @@ app = FastAPI(
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+# Credentials (cookies/authorization) are only forwarded to explicit origins.
+# A wildcard "*" origin forces allow_credentials=False (browsers reject wildcard+credentials anyway).
+_allow_credentials = settings.cors_allow_credentials and "*" not in settings.cors_origins_list
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=_allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Bootstrap-Token", "Content-Disposition"],
     expose_headers=["Content-Disposition"],
+    max_age=600,
 )
 
 

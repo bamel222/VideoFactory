@@ -15,22 +15,33 @@ def _derive_key(secret: str) -> bytes:
     return base64.urlsafe_b64encode(digest)
 
 
-_fernet = Fernet(_derive_key(get_settings().encryption_key))
+def _build_fernets() -> list[Fernet]:
+    settings = get_settings()
+    keys: list[str] = [settings.encryption_key]
+    if settings.encryption_keys:
+        keys += [k.strip() for k in settings.encryption_keys.split(",") if k.strip()]
+    return [Fernet(_derive_key(k)) for k in keys]
+
+
+# First entry is the primary (encryption) key; the rest are legacy keys for decryption.
+_FERNETS = _build_fernets()
 
 
 def encrypt_secret(plaintext: str) -> str:
     if not plaintext:
         return ""
-    return _fernet.encrypt(plaintext.encode()).decode()
+    return _FERNETS[0].encrypt(plaintext.encode()).decode()
 
 
 def decrypt_secret(token: str) -> str:
     if not token:
         return ""
-    try:
-        return _fernet.decrypt(token.encode()).decode()
-    except InvalidToken:
-        return ""
+    for fernet in _FERNETS:
+        try:
+            return fernet.decrypt(token.encode()).decode()
+        except InvalidToken:
+            continue
+    return ""
 
 
 def mask_secret(value: str) -> str:

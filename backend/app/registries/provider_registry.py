@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.encryption import decrypt_secret, encrypt_secret, mask_secret
+from app.core.ssrf import validate_ssrf_safe
 from app.models import Provider
 
 DEFAULT_FAKE_PROVIDERS = [
@@ -118,12 +119,22 @@ class ProviderRegistry:
             raise HTTPException(404, "Provider not found")
         return p
 
+    def _validate_endpoint(self, endpoint: str) -> None:
+        ep = (endpoint or "").lower()
+        if ep.startswith(("mock://", "fake://")):
+            return
+        try:
+            validate_ssrf_safe(endpoint)
+        except ValueError as exc:
+            raise HTTPException(400, f"Endpoint invalide (SSRF): {exc}")
+
     def create(self, data) -> Provider:
         if data.role not in (
             "research", "transcription", "translation", "script", "tts", "voice", "music",
             "image", "video", "assembly", "seo", "qa", "licensing", "caption",
         ):
             raise HTTPException(400, f"Invalid provider role: {data.role}")
+        self._validate_endpoint(data.endpoint)
         p = Provider(
             workspace_id=self.workspace_id,
             name=data.name,
@@ -148,6 +159,8 @@ class ProviderRegistry:
 
     def update(self, provider_id: int, data) -> Provider:
         p = self.get(provider_id)
+        if data.endpoint is not None:
+            self._validate_endpoint(data.endpoint)
         for field, value in data.model_dump(exclude_unset=True).items():
             if field == "api_key":
                 if value:

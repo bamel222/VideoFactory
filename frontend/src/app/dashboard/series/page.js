@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, can } from "@/lib/api";
+import { PageHeader, SkeletonRows, Field, useToast } from "@/components/ui";
 
 function StatusBadge({ status }) {
   const map = {
@@ -14,29 +15,30 @@ function StatusBadge({ status }) {
 
 const MODE_OPTIONS = {
   documentary: [
-    { value: "images", label: "Photo-Cinéma (images fixes)", title: "Images fixes animées en douceur (effet Ken Burns), accompagnées de la narration, de la musique et des sous-titres. Style documentaire classique et cinématographique." },
-    { value: "video", label: "Vidéo Clip IA (clips vidéo)", title: "Montage composé de clips vidéo issus de banques d'images (Pexels/Pixabay) avec secours IA. Rendu dynamique, proche d'un reportage télévisé." },
+    { value: "images", label: "Photo-Cinéma", title: "Images fixes animées en douceur (effet Ken Burns), narration, musique et sous-titres. Style documentaire classique et cinématographique." },
+    { value: "video", label: "Vidéo Clip IA", title: "Montage de clips vidéo issus de banques d'images (Pexels/Pixabay) avec secours IA. Rendu dynamique, proche d'un reportage télévisé." },
   ],
   cartoon: [
-    { value: "video", label: "Cartoon Clip IA (clips animés)", title: "Cartoon composé de clips vidéo animés générés par IA. Style 3D / animation fluide." },
-    { value: "images", label: "Cartoon 2D Animé (images + animation)", title: "Images illustrées animées en 2D légère (déplacements, parallaxe des décors, lèvres approximativement synchronisées). Style dessin animé traditionnel, plus économique que les clips vidéo." },
+    { value: "video", label: "Cartoon Clip IA", title: "Cartoon composé de clips vidéo animés générés par IA. Style 3D / animation fluide." },
+    { value: "images", label: "Cartoon 2D Animé", title: "Images illustrées animées en 2D légère (déplacements, parallaxe, lèvres approximatives). Style dessin animé traditionnel, plus économique." },
   ],
 };
 
 const DEFAULT_MODE = { documentary: "images", cartoon: "video" };
+const EMPTY_FORM = { title: "", topic: "", kind: "documentary", generation_mode: "images", duration_minutes: 26, planned_episodes: 1, language: "fr", based_on_facts: false };
 
 export default function SeriesPage() {
-  const [series, setSeries] = useState([]);
-  const [form, setForm] = useState({ title: "", topic: "", kind: "documentary", generation_mode: "images", duration_minutes: 26, planned_episodes: 1, language: "fr", based_on_facts: false });
+  const [series, setSeries] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState("");
+  const { toast, toastError } = useToast();
 
   const load = async () => {
     try {
       setSeries(await api("/series"));
     } catch (e) {
-      setError(e.message);
+      toastError(e.message);
     }
   };
 
@@ -51,7 +53,8 @@ export default function SeriesPage() {
     setError("");
     try {
       await api("/series", { method: "POST", body: JSON.stringify(form) });
-      setForm({ title: "", topic: "", kind: "documentary", generation_mode: "images", duration_minutes: 26, planned_episodes: 1, language: "fr", based_on_facts: false });
+      setForm(EMPTY_FORM);
+      toast("Série créée");
       await load();
     } catch (err) {
       setError(err.message);
@@ -60,15 +63,14 @@ export default function SeriesPage() {
 
   async function action(id, type) {
     setError("");
-    setMsg("");
     setBusy(`${type}-${id}`);
     try {
       if (type === "dryrun") {
         const r = await api(`/series/${id}/dry-run`, { method: "POST" });
-        setMsg(`Dry run: ${r.report.ready_to_launch ? "prêt à lancer" : "attention, risques détectés"} — ${r.report.tasks} tâches, coût estimé $${r.report.budget.estimated_cost}`);
+        toast(`Dry run : ${r.report.tasks} tâches, coût estimé $${r.report.budget.estimated_cost} — ${r.report.ready_to_launch ? "prêt à lancer" : "risques détectés"}`);
       } else {
         const r = await api(`/series/${id}/run`, { method: "POST", body: JSON.stringify({ series_id: id, dry_run: false }) });
-        setMsg(`Pipeline terminé: ${r.done_tasks}/${r.total_tasks} tâches, statut ${r.status}`);
+        toast(`Pipeline : ${r.done_tasks}/${r.total_tasks} tâches, statut ${r.status}`);
       }
       await load();
     } catch (err) {
@@ -78,68 +80,61 @@ export default function SeriesPage() {
     }
   }
 
+  const selectedModeTitle = (s) => MODE_OPTIONS[s.kind]?.find((o) => o.value === s.generation_mode)?.title;
+
   return (
     <div>
-      <h1>Séries & Pipelines</h1>
+      <PageHeader title="Séries & Pipelines" subtitle="Créez une série documentaire ou cartoon, choisissez son format de génération puis lancez le pipeline." />
+
       {error && <div className="error">{error}</div>}
-      {msg && <div className="success">{msg}</div>}
 
       <div className="card mb">
         <h2>Nouvelle série</h2>
         <form onSubmit={create}>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 170px 150px 110px auto", alignItems: "end" }}>
-            <div className="field">
-              <label>Titre</label>
+          <div className="grid" style={{ gridTemplateColumns: "1fr 170px 200px 130px 110px auto", alignItems: "end" }}>
+            <Field label="Titre">
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-            </div>
-            <div className="field">
-              <label>Type</label>
+            </Field>
+            <Field label="Type">
               <select value={form.kind} onChange={(e) => onKindChange(e.target.value)}>
                 <option value="documentary">Documentaire</option>
                 <option value="cartoon">Cartoon</option>
               </select>
-            </div>
-            <div className="field">
-              <label title="Choisissez le format de génération — passez la souris sur une option pour plus de détails">
-                Format de génération
-              </label>
+            </Field>
+            <Field label="Format de génération" hint="Survolez une option pour plus de détails">
               <select
                 value={form.generation_mode}
                 onChange={(e) => setForm({ ...form, generation_mode: e.target.value })}
-                title={MODE_OPTIONS[form.kind].find((o) => o.value === form.generation_mode)?.title}
+                title={selectedModeTitle(form)}
               >
                 {MODE_OPTIONS[form.kind].map((o) => (
                   <option key={o.value} value={o.value} title={o.title}>{o.label}</option>
                 ))}
               </select>
-            </div>
-            <div className="field">
-              <label title="Durée cible d'un épisode, en minutes">Durée / ép (min)</label>
+            </Field>
+            <Field label="Durée / ép (min)" hint="24 à 28 minutes">
               <input type="number" min="24" max="28" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })} />
-            </div>
-            <div className="field">
-              <label>Épisodes</label>
+            </Field>
+            <Field label="Épisodes">
               <input type="number" min="1" max="10" value={form.planned_episodes} onChange={(e) => setForm({ ...form, planned_episodes: Number(e.target.value) })} />
-            </div>
+            </Field>
             <button type="submit">Créer</button>
           </div>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 220px 150px", alignItems: "end" }}>
-            <div className="field">
-              <label>{"Sujet (max 3000 caractères) — décrivez l'idée globale de la série"}</label>
+          <div className="grid" style={{ gridTemplateColumns: "1fr 220px 180px", alignItems: "start" }}>
+            <Field label="Sujet (max 3000 caractères)" hint="Décrivez l'idée globale de la série">
               <textarea rows="4" maxLength="3000" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required placeholder="Ex : une série documentaire grand public sur l'histoire des océans, du rôle des courants à la biodiversité des abysses..." />
-            </div>
-            <div className="field">
-              <label>Langue</label>
+            </Field>
+            <Field label="Langue">
               <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
                 {["fr", "en", "es", "de", "it", "pt"].map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
-            </div>
+            </Field>
             {form.kind === "cartoon" && (
               <div className="field">
                 <label>Fact-checking</label>
-                <label className="row" style={{ alignItems: "center", gap: 8 }}>
+                <label className="row" style={{ alignItems: "center", gap: 8, marginTop: 4 }}>
                   <input type="checkbox" checked={form.based_on_facts} onChange={(e) => setForm({ ...form, based_on_facts: e.target.checked })} />
-                  <span title="Cochez si le cartoon s'appuie sur des événements réels : la vérification des faits sera alors incluse dans le pipeline. Pour une fiction, laissez décoché.">
+                  <span title="Cochez si le cartoon s'appuie sur des événements réels : la vérification des faits sera incluse dans le pipeline. Pour une fiction, laissez décoché.">
                     Basé sur des faits réels
                   </span>
                 </label>
@@ -149,37 +144,47 @@ export default function SeriesPage() {
         </form>
       </div>
 
-      <table className="table">
-        <thead>
-          <tr>
-            <th>#</th><th>Titre</th><th>Type</th><th>Format</th><th>Durée/ép</th><th>Statut</th><th>Épisodes</th>
-            <th>Score business</th><th>Coût</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {series.map((s) => (
-            <tr key={s.id}>
-              <td>{s.id}</td>
-              <td><Link href={`/dashboard/series/${s.id}`}>{s.title}</Link></td>
-              <td>{s.kind}</td>
-              <td>{MODE_OPTIONS[s.kind]?.find((o) => o.value === s.generation_mode)?.label || s.generation_mode}</td>
-              <td>{s.duration_minutes || 26} min</td>
-              <td><StatusBadge status={s.status} /></td>
-              <td>{s.planned_episodes}</td>
-              <td>{s.business_score}</td>
-              <td>${s.production_cost}</td>
-              <td>
-                <div className="row">
-                  <button className="small secondary" disabled={busy === `dryrun-${s.id}`} onClick={() => action(s.id, "dryrun")}>Dry run</button>
-                  {can("pipeline.run") && (
-                    <button className="small" disabled={busy === `run-${s.id}`} onClick={() => action(s.id, "run")}>Lancer</button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {!series ? (
+        <SkeletonRows rows={5} cols={10} />
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>#</th><th>Titre</th><th>Type</th><th>Format</th><th>Durée/ép</th><th>Statut</th><th>Épisodes</th>
+                <th>Score business</th><th>Coût</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {series.map((s) => (
+                <tr key={s.id}>
+                  <td className="muted">{s.id}</td>
+                  <td><Link href={`/dashboard/series/${s.id}`}>{s.title}</Link></td>
+                  <td><span className="badge gray">{s.kind}</span></td>
+                  <td title={selectedModeTitle(s)}>{MODE_OPTIONS[s.kind]?.find((o) => o.value === s.generation_mode)?.label || s.generation_mode}</td>
+                  <td>{s.duration_minutes || 26} min</td>
+                  <td><StatusBadge status={s.status} /></td>
+                  <td>{s.planned_episodes}</td>
+                  <td>{s.business_score}</td>
+                  <td>${s.production_cost}</td>
+                  <td>
+                    <div className="row">
+                      <button className="small secondary" disabled={busy === `dryrun-${s.id}`} onClick={() => action(s.id, "dryrun")}>
+                        {busy === `dryrun-${s.id}` ? "..." : "Dry run"}
+                      </button>
+                      {can("pipeline.run") && (
+                        <button className="small" disabled={busy === `run-${s.id}`} onClick={() => action(s.id, "run")}>
+                          {busy === `run-${s.id}` ? "..." : "Lancer"}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

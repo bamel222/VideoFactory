@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
+import tempfile
 
 from app.core.config import get_settings
 
@@ -83,3 +85,69 @@ def _checksum(data: bytes) -> str:
     import hashlib
 
     return hashlib.sha256(data).hexdigest()
+
+
+def _ffmpeg_binary() -> str | None:
+    try:
+        from app.agents.ffmpeg_utils import ffmpeg_binary
+
+        return ffmpeg_binary()
+    except Exception:
+        return None
+
+
+def _probe(path: str, binary: str) -> tuple[float, int, int]:
+    """Return (duration_s, width, height) parsed from ffmpeg's probe output."""
+    result = subprocess.run(
+        [binary, "-hide_banner", "-i", path, "-f", "null", "-"],
+        capture_output=True, text=True, timeout=120,
+    )
+    stderr = result.stderr or ""
+    duration = 0.0
+    width = height = 0
+    for line in stderr.splitlines():
+        m = re.search(r"Duration:\s*(\d+):(\d+):([\d.]+)", line)
+        if m:
+            duration = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+        m = re.search(r"Video:\s*.*?(\d+)x(\d+)", line)
+        if m:
+            width, height = int(m.group(1)), int(m.group(2))
+    return duration, width, height
+
+
+def deep_validate_media(data: bytes, ext: str) -> None:
+    """Verify a media payload decodes cleanly with ffmpeg and respects size caps.
+
+    Catches polyglot/corrupt files that pass magic-byte checks. No-op when
+    ffmpeg is unavailable (defense in depth, never a hard block in tests).
+    """
+    binary = _ffmpeg_binary()
+    if binary is None:
+        return
+    if ext in ("jpg", "jpeg", "png", "webp"):
+        kind = "image"
+    elif ext in ("mp4", "mov", "webm", "mp3", "wav", "ogg"):
+        kind = "media"
+    else:
+        return
+
+    with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f:
+        f.write(data)
+        path = f.name
+    try:
+        duration, width, height = _probe(path, binary)
+        if kind == "image":
+            if width <= 0 or height <= 0:
+                raise ValueError("Image illisible (décodage échoué)")
+            if width * height > settings.max_image_pixels:
+                raise ValueError(f"Image trop grande ({width}x{height} pixels)")
+        else:
+            if duration <= 0:
+                raise ValueError("Média illisible (décodage échoué)")
+            if duration > settings.max_media_seconds:
+                raise ValueError(f"Média trop long ({int(duration)}s)")
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass

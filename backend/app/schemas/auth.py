@@ -19,6 +19,12 @@ class TokenResponse(BaseModel):
     email: str
     user_id: int
     workspace_id: int
+    password_expired: bool = False
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
 
 
 class RegisterRequest(BaseModel):
@@ -39,6 +45,7 @@ class UserUpdate(BaseModel):
     name: str | None = None
     role: str | None = None
     active: bool | None = None
+    password: str | None = None
 
 
 class UserOut(ORMModel):

@@ -59,3 +59,14 @@ def seeded_series(client, owner_token) -> int:
     )
     assert r.status_code == 200, r.text
     return r.json()["id"]
+
+
+@pytest.fixture(autouse=True)
+def _fresh_redis():
+    from app.core import redis as redis_store
+
+    try:
+        redis_store._client.flushall()
+    except Exception:
+        pass
+    yield

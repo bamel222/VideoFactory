@@ -21,6 +21,11 @@ export function getEmail() {
   return window.localStorage.getItem("vf_email") || "";
 }
 
+export function getInitial() {
+  const email = getEmail();
+  return (email.charAt(0) || "?").toUpperCase();
+}
+
 export function logout() {
   window.localStorage.removeItem("vf_token");
   window.localStorage.removeItem("vf_role");

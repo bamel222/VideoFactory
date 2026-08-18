@@ -12,12 +12,13 @@ from app.models.content import Episode, Scene, Segment, Series
 from app.models.jobs import Checkpoint, JobRun, JobTask
 from app.models.production import BudgetForecast, ContinuityPack, DryRun
 from app.models.provider import Provider, StorageBackend
-from app.models.user import User, Workspace
+from app.models.user import PasswordHistory, User, Workspace
 
 __all__ = [
     "Base",
     "User",
     "Workspace",
+    "PasswordHistory",
     "Provider",
     "StorageBackend",
     "Series",
