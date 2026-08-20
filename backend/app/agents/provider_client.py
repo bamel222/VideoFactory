@@ -241,8 +241,8 @@ class MockProviderClient:
             try:
                 montage.mix_audio(
                     raw,
-                    media["audio"][:1],
-                    media["audio"][1:],
+                    media["narration"],
+                    media["music"],
                     media["subtitles"][0] if media["subtitles"] else None,
                     path,
                 )
