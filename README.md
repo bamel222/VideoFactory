@@ -120,6 +120,21 @@ Sans `EMAIL_PROVIDER`, les notifications email sont simplement ignorées (les
 webhooks Discord/Telegram restent actifs). Les webhooks Discord/Telegram sont
 gratuits et illimités.
 
+### Créer un bot Telegram (2 minutes)
+
+1. **Créer le bot** : ouvrez Telegram, cherchez **@BotFather**, puis envoyez
+   `/newbot`. Suivez les instructions (nom + nom d'utilisateur du bot). À la
+   fin, BotFather vous donne le **token**, de la forme `123456:ABC-DEF...`.
+2. **Récupérer votre chat_id** : deux méthodes simples —
+   - Envoyez un message quelconque à votre bot, puis ouvrez dans un navigateur :
+     `https://api.telegram.org/bot<TOKEN>/getUpdates` (remplacez `<TOKEN>` par
+     votre token). Cherchez `"chat":{"id": ...}` : c'est votre chat_id.
+   - Ou envoyez `/start` à **@userinfobot** ou **@getidsbot**, qui vous donnent
+     directement votre ID.
+
+Dans **Paramètres → Notifications**, collez le **bot token** et le **chat id**.
+Ils sont chiffrés en base et jamais ré-affichés.
+
 ## Documentation
 
 - Spécification: docs/spec.md
