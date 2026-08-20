@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { PageHeader, StatCard, SkeletonCards, useToast } from "@/components/ui";
+import { StatCard, SkeletonCards, useToast } from "@/components/ui";
 
 const Icons = {
   series: (
@@ -75,10 +75,13 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Vue d'ensemble"
-        subtitle="Pilotage de votre usine vidéo : production, fournisseurs et budget."
-      />
+      <div className="topbar">
+        <div>
+          <div className="kicker">Production</div>
+          <h1>Vue d'ensemble</h1>
+          <div className="subtitle">Supervisez votre usine vidéo — production en cours, fournisseurs et budget.</div>
+        </div>
+      </div>
 
       {!stats ? (
         <SkeletonCards count={6} />
@@ -96,19 +99,33 @@ export default function DashboardPage() {
 
       <div className="card">
         <h2>Commencer</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: 6, maxWidth: 620 }}>
+          Survolez chaque étape pour en comprendre le sens, puis lancez votre première production.
+        </p>
         <ol className="muted" style={{ paddingLeft: 18, lineHeight: 2 }}>
           <li>
-            Créez une série (documentaire ou cartoon) dans{" "}
-            <Link href="/dashboard/series">Séries & Pipelines</Link> — choisissez le format (Photo-Cinéma, Vidéo Clip IA, Cartoon 2D Animé…) et la durée par épisode (24-28 min).
+            <span data-tip="Une série est un ensemble d'épisodes (documentaire ou cartoon). Vous y choisissez le format de génération (Photo-Cinéma, Vidéo Clip IA, Cartoon 2D Animé) et la durée de chaque épisode.">
+              Créez une série
+            </span>{" "}
+            dans <Link href="/dashboard/series">Séries &amp; Pipelines</Link>.
           </li>
           <li>
-            Lancez un <strong>dry run</strong> pour estimer coûts et quotas avant toute consommation.
+            <span data-tip="Un dry run est une simulation complète du pipeline sans produire de vidéo : il estime le coût, les quotas et détecte les risques (providers manquants, stockage insuffisant) avant toute dépense réelle.">
+              Lancez un <strong>dry run</strong>
+            </span>{" "}
+            pour estimer coûts et quotas.
           </li>
           <li>
-            Exécutez le <strong>pipeline</strong> : recherche, script, voix, images/vidéos, montage final, SEO et licences sont produits par les agents.
+            <span data-tip="Le pipeline est la chaîne automatisée d'agents qui transforme une idée en vidéo finale : recherche, script, voix, images/vidéos, montage, SEO et licences. « Exécuter » lance cette chaîne de bout en bout.">
+              Exécutez le <strong>pipeline</strong>
+            </span>{" "}
+            : les agents produisent recherche, script, voix, images, montage et SEO.
           </li>
           <li>
-            Validez dans <Link href="/dashboard/review">Review & Publication</Link> puis publiez (Owner uniquement).
+            <span data-tip="Valider est la revue qualité finale : vous contrôlez la vidéo, les shorts, le SEO et les sources avant publication. Aucun contenu ne part sans validation explicite.">
+              Validez
+            </span>{" "}
+            dans <Link href="/dashboard/review">Review &amp; Publication</Link> puis publiez (Owner uniquement).
           </li>
         </ol>
       </div>

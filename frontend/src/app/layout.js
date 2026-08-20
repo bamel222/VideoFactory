@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Video Factory AI",
+  title: "Video Factory",
   description: "Usine vidéo multi-agents free-first",
 };
 

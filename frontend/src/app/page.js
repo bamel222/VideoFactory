@@ -6,10 +6,12 @@ import { setSession, getToken } from "@/lib/api";
 import { getItem, removeItem } from "@/lib/storage";
 import { Field } from "@/components/ui";
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("owner@vf.ai");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState(IS_PRODUCTION ? "" : "owner@vf.ai");
+  const [password, setPassword] = useState(IS_PRODUCTION ? "" : "password123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -53,27 +55,30 @@ export default function LoginPage() {
       <div className="card login-card">
         <div className="brand mb">
           <div className="brand-logo">VF</div>
-          <span>Video Factory AI</span>
+          <span>Video Factory</span>
         </div>
-        <h1 style={{ fontSize: 20 }}>Connexion</h1>
-        <p className="muted" style={{ fontSize: 13 }}>
-          Usine vidéo multi-agents — documentaires multilingues et cartoons enfants.
+        <div className="kicker">Cinéma &amp; Édition</div>
+        <h1 style={{ fontSize: 30, fontWeight: 400, marginBottom: 8 }}>Connexion</h1>
+        <p className="muted" style={{ fontSize: 13, maxWidth: 320 }}>
+          Documentaires multilingues et cartoons pour enfants, produits automatiquement par une usine vidéo multi-agents.
         </p>
         {error && <div className="error">{error}</div>}
-        <form onSubmit={login}>
+        <form onSubmit={login} style={{ marginTop: 20 }}>
           <Field label="Email">
             <input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
           </Field>
           <Field label="Mot de passe">
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
           </Field>
-          <button type="submit" disabled={loading} style={{ width: "100%" }}>
+          <button type="submit" disabled={loading} style={{ width: "100%", justifyContent: "center" }}>
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
-        <div className="mt faint" style={{ fontSize: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-          Comptes de démo : owner@vf.ai / admin@vf.ai / reviewer@vf.ai — mot de passe : password123
-        </div>
+        {!IS_PRODUCTION && (
+          <div className="mt faint" style={{ fontSize: 12, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+            Comptes de démo : owner@vf.ai / admin@vf.ai / reviewer@vf.ai — mot de passe : password123
+          </div>
+        )}
       </div>
     </div>
   );

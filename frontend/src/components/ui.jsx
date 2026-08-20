@@ -14,12 +14,10 @@ export function PageHeader({ title, subtitle, actions }) {
   );
 }
 
-export function StatCard({ icon, iconBg, value, label, loading }) {
+export function StatCard({ icon, value, label, loading }) {
   return (
     <div className="stat">
-      <div className="stat-icon" style={{ background: iconBg || "linear-gradient(135deg, #6366f1, #22d3ee)" }}>
-        {icon}
-      </div>
+      <div className="stat-icon">{icon}</div>
       <div>
         {loading ? <div className="skeleton title" style={{ width: 80 }} /> : <div className="value">{value ?? "—"}</div>}
         <div className="label">{label}</div>

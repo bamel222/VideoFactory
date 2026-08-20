@@ -183,7 +183,7 @@ function Shell({ children }) {
       <nav className="sidebar">
         <div className="brand">
           <div className="brand-logo">VF</div>
-          <span className="brand-text">Video Factory AI</span>
+          <span className="brand-text">Video Factory</span>
         </div>
         <div className="nav-section-label">Espace de travail</div>
         {NAV.map((n) => {
