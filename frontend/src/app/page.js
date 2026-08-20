@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setSession, getToken } from "@/lib/api";
+import { getItem, removeItem } from "@/lib/storage";
 import { Field } from "@/components/ui";
 
 export default function LoginPage() {
@@ -12,9 +13,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (typeof window !== "undefined" && getToken()) {
-    router.replace("/dashboard");
-  }
+  useEffect(() => {
+    if (getToken()) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
 
   async function login(e) {
     e.preventDefault();
@@ -32,9 +35,9 @@ export default function LoginPage() {
       }
       setSession(data.access_token, data.role, data.email);
       if (data.password_expired) {
-        window.localStorage.setItem("vf_pw_expired", "1");
+        setItem("vf_pw_expired", "1");
       } else {
-        window.localStorage.removeItem("vf_pw_expired");
+        removeItem("vf_pw_expired");
       }
       router.replace("/dashboard");
     } catch (err) {

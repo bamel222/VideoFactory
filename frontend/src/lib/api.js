@@ -1,24 +1,26 @@
+import { getItem, setItem, removeItem } from "./storage";
+
 const BASE = "/api/v1";
 
 export function getToken() {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("vf_token");
+  return getItem("vf_token");
 }
 
 export function setSession(token, role, email) {
-  window.localStorage.setItem("vf_token", token);
-  window.localStorage.setItem("vf_role", role || "");
-  window.localStorage.setItem("vf_email", email || "");
+  setItem("vf_token", token);
+  setItem("vf_role", role || "");
+  setItem("vf_email", email || "");
 }
 
 export function getRole() {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("vf_role");
+  return getItem("vf_role");
 }
 
 export function getEmail() {
   if (typeof window === "undefined") return "";
-  return window.localStorage.getItem("vf_email") || "";
+  return getItem("vf_email") || "";
 }
 
 export function getInitial() {
@@ -27,9 +29,9 @@ export function getInitial() {
 }
 
 export function logout() {
-  window.localStorage.removeItem("vf_token");
-  window.localStorage.removeItem("vf_role");
-  window.localStorage.removeItem("vf_email");
+  removeItem("vf_token");
+  removeItem("vf_role");
+  removeItem("vf_email");
 }
 
 export function can(permission) {

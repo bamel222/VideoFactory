@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getToken, getRole, getEmail, getInitial, logout, api } from "@/lib/api";
+import { getItem, removeItem } from "@/lib/storage";
 import { Modal, ToastProvider, useToast, Field } from "@/components/ui";
 
 const ICONS = {
@@ -105,7 +106,7 @@ function ChangePasswordModal({ onClose }) {
         method: "POST",
         body: JSON.stringify({ old_password: form.old_password, new_password: form.new_password }),
       });
-      window.localStorage.removeItem("vf_pw_expired");
+      removeItem("vf_pw_expired");
       toast("Mot de passe mis à jour");
       onClose();
     } catch (err) {
@@ -151,7 +152,7 @@ function Shell({ children }) {
   }, [router]);
 
   useEffect(() => {
-    const flag = window.localStorage.getItem("vf_pw_expired");
+    const flag = getItem("vf_pw_expired");
     if (flag === "1" && getToken()) setPwModal(true);
   }, []);
 
