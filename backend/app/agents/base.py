@@ -41,10 +41,10 @@ def execute_task(db: Session, task: JobTask, provider: Provider) -> JobTask:
                 series = db.get(Series, task.series_id)
                 workspace_id = series.workspace_id if series else provider.workspace_id
                 if os.path.exists(path):
-                    with open(path, "rb") as f:
-                        data = f.read()
                     rel = f"series/{task.series_id}/task_{task.id}/{os.path.basename(path)}"
-                    assets = StorageRegistry(db, workspace_id).store_asset(rel, data, kind=result.get("type", "file"))
+                    assets = StorageRegistry(db, workspace_id).store_asset_stream(
+                        rel, path, kind=result.get("type", "file")
+                    )
                     storage_ref = assets[0].path if assets else path
                 else:
                     storage_ref = path

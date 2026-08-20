@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
+import shutil
+import tempfile
 import time
 from abc import ABC, abstractmethod
 from typing import Optional
@@ -20,11 +23,18 @@ settings = get_settings()
 
 STORAGE_ROOT = os.path.join(settings.data_dir, "storage")
 
+# Streaming chunk size (1 MB).
+CHUNK_SIZE = 1024 * 1024
+
 
 class StorageAdapter(ABC):
     @abstractmethod
+    def upload_stream(self, path: str, src, content_type: str = "") -> str:
+        """Stream `src` (a binary file-like) to storage; return remote path/key."""
+
     def upload(self, path: str, data: bytes, content_type: str = "") -> str:
-        """Return remote path/key."""
+        """Convenience: upload in-memory bytes via a stream."""
+        return self.upload_stream(path, io.BytesIO(data), content_type)
 
     @abstractmethod
     def download(self, path: str) -> bytes:
@@ -60,11 +70,11 @@ class LocalStorageAdapter(StorageAdapter):
             raise ValueError("Path traversal blocked")
         return abs_path
 
-    def upload(self, path: str, data: bytes, content_type: str = "") -> str:
+    def upload_stream(self, path: str, src, content_type: str = "") -> str:
         abs_path = self._abs(path)
         os.makedirs(os.path.dirname(abs_path), exist_ok=True)
         with open(abs_path, "wb") as f:
-            f.write(data)
+            shutil.copyfileobj(src, f, length=CHUNK_SIZE)
         return path
 
     def download(self, path: str) -> bytes:
@@ -99,9 +109,9 @@ class S3CompatibleAdapter(StorageAdapter):
             aws_secret_access_key=config.get("secret_key"),
         )
 
-    def upload(self, path: str, data: bytes, content_type: str = "") -> str:
+    def upload_stream(self, path: str, src, content_type: str = "") -> str:
         extra = {"ContentType": content_type} if content_type else {}
-        self.client.put_object(Bucket=self.bucket, Key=path, Body=data, **extra)
+        self.client.upload_fileobj(src, self.bucket, path, ExtraArgs=extra)
         return path
 
     def download(self, path: str) -> bytes:
@@ -130,13 +140,21 @@ class SupabaseStorageAdapter(StorageAdapter):
         self.key = config.get("service_role_key") or settings.supabase_service_role_key
         self.bucket = config.get("bucket", "assets")
 
-    def upload(self, path: str, data: bytes, content_type: str = "") -> str:
+    def upload_stream(self, path: str, src, content_type: str = "") -> str:
         headers = {"apikey": self.key, "Authorization": f"Bearer {self.key}"}
         if content_type:
             headers["Content-Type"] = content_type
+
+        def _chunks():
+            while True:
+                chunk = src.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                yield chunk
+
         resp = httpx.post(
             f"{self.url}/storage/v1/object/{self.bucket}/{path}",
-            content=data, headers=headers, timeout=60,
+            content=_chunks(), headers=headers, timeout=60,
         )
         resp.raise_for_status()
         return path
@@ -192,6 +210,44 @@ def build_adapter(storage: StorageBackend) -> StorageAdapter:
     raise HTTPException(400, f"Unknown storage kind: {storage.kind}")
 
 
+def _open_source(src) -> tuple[object, bool]:
+    """Normalize a source (bytes / path / file-like) into a seekable file-like.
+
+    Returns (fileobj, should_close). Non-seekable file-likes are spooled to a
+    temporary file so size/checksum can be measured and the payload re-streamed.
+    """
+    if isinstance(src, (bytes, bytearray)):
+        return io.BytesIO(src), False
+    if isinstance(src, (str, os.PathLike)):
+        return open(src, "rb"), True
+    if hasattr(src, "read"):
+        try:
+            if src.seekable():
+                src.seek(0)
+                return src, False
+        except (AttributeError, OSError):
+            pass
+        spool = tempfile.SpooledTemporaryFile(max_size=CHUNK_SIZE)
+        shutil.copyfileobj(src, spool, length=CHUNK_SIZE)
+        spool.seek(0)
+        return spool, True
+    raise TypeError(f"Type de source non supporté: {type(src)!r}")
+
+
+def _measure_stream(src) -> tuple[int, str]:
+    """Return (size, sha256 hexdigest) of a seekable stream, rewinding it."""
+    h = hashlib.sha256()
+    size = 0
+    while True:
+        chunk = src.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        size += len(chunk)
+        h.update(chunk)
+    src.seek(0)
+    return size, h.hexdigest()
+
+
 def _validate_storage_config(kind: str, config: dict) -> None:
     """SSRF-guard outbound storage endpoints (Supabase URL, S3/MinIO endpoint).
 
@@ -224,7 +280,6 @@ class StorageRegistry:
     def __init__(self, db: Session, workspace_id: int):
         self.db = db
         self.workspace_id = workspace_id
-
     def list(self) -> list[StorageBackend]:
         return list(
             self.db.scalars(
@@ -300,37 +355,56 @@ class StorageRegistry:
         return self.create(StorageCreateShim("Local", "local", {}, 0, 0.0, "active", "", ""))
 
     def store_asset(self, path: str, data: bytes, kind: str = "file", content_type: str = "", replicas: int | None = None) -> list[Asset]:
+        """Upload in-memory bytes (convenience wrapper around the streaming path)."""
+        return self.store_asset_stream(path, data, kind=kind, content_type=content_type, replicas=replicas)
+
+    def store_asset_stream(self, path: str, src, *, kind: str = "file", content_type: str = "", replicas: int | None = None) -> list[Asset]:
+        """Stream an asset from `src` (bytes, filesystem path, or file-like) to storage.
+
+        The payload is never fully buffered in memory: size and checksum are
+        computed in a single streaming pass, then the source is streamed to each
+        backend (local disk, S3 upload_fileobj, Supabase chunked upload).
+        """
         backends = self.select_active()
         if replicas is None:
             replicas = len(backends)
-        checksum = hashlib.sha256(data).hexdigest()
-        stored: list[Asset] = []
-        for i, backend in enumerate(backends[: max(replicas, 1)]):
-            # Enforce the backend quota before uploading (0 == unlimited).
-            if backend.quota_bytes and backend.used_bytes + len(data) > backend.quota_bytes:
-                raise HTTPException(
-                    507,
-                    f"Quota de stockage dépassé sur '{backend.name}' "
-                    f"({backend.used_bytes + len(data)}/{backend.quota_bytes} octets)",
+        if not backends:
+            raise HTTPException(500, "Aucun backend de stockage actif")
+
+        src_file, should_close = _open_source(src)
+        try:
+            size, checksum = _measure_stream(src_file)
+            stored: list[Asset] = []
+            for i, backend in enumerate(backends[: max(replicas, 1)]):
+                # Enforce the backend quota before uploading (0 == unlimited).
+                if backend.quota_bytes and backend.used_bytes + size > backend.quota_bytes:
+                    raise HTTPException(
+                        507,
+                        f"Quota de stockage dépassé sur '{backend.name}' "
+                        f"({backend.used_bytes + size}/{backend.quota_bytes} octets)",
+                    )
+                adapter = build_adapter(backend)
+                src_file.seek(0)
+                remote_path = adapter.upload_stream(f"{path}", src_file, content_type)
+                backend.used_bytes += size
+                asset = Asset(
+                    workspace_id=self.workspace_id,
+                    storage_id=backend.id,
+                    path=remote_path,
+                    checksum=checksum,
+                    size=size,
+                    kind=kind,
+                    content_type=content_type,
                 )
-            adapter = build_adapter(backend)
-            remote_path = adapter.upload(f"{path}", data, content_type)
-            backend.used_bytes += len(data)
-            asset = Asset(
-                workspace_id=self.workspace_id,
-                storage_id=backend.id,
-                path=remote_path,
-                checksum=checksum,
-                size=len(data),
-                kind=kind,
-                content_type=content_type,
-            )
-            self.db.add(asset)
-            stored.append(asset)
-        self.db.commit()
-        for a in stored:
-            self.db.refresh(a)
-        return stored
+                self.db.add(asset)
+                stored.append(asset)
+            self.db.commit()
+            for a in stored:
+                self.db.refresh(a)
+            return stored
+        finally:
+            if should_close:
+                src_file.close()
 
     def read_asset(self, asset: Asset) -> bytes:
         backend = self.get(asset.storage_id)

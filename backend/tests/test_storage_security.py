@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 
 import pytest
 
 from app.core.config import DEFAULT_SECRET_VALUES, get_settings
-from app.registries.storage_registry import LocalStorageAdapter
+from app.registries.storage_registry import LocalStorageAdapter, StorageRegistry
 
 
 def test_local_adapter_blocks_path_traversal():
@@ -43,3 +44,31 @@ def test_insecure_defaults_detected():
         JWT_SECRET="another-strong-secret",
     )
     assert secure_settings.insecure_defaults() == []
+
+
+def test_store_asset_stream_from_path(client):
+    """Streaming upload from a filesystem path: size/checksum/content correct."""
+    from app.core.db import SessionLocal
+    from app.models import Workspace
+
+    payload = os.urandom(2 * 1024 * 1024)  # 2 MB of random bytes
+    with tempfile.TemporaryDirectory() as d:
+        src = os.path.join(d, "big.bin")
+        with open(src, "wb") as f:
+            f.write(payload)
+
+        db = SessionLocal()
+        try:
+            ws = db.get(Workspace, 1)
+            reg = StorageRegistry(db, ws.id)
+            assets = reg.store_asset_stream(
+                "series/1/task_1/big.bin", src, kind="video", content_type="application/octet-stream"
+            )
+            assert len(assets) >= 1
+            a = assets[0]
+            assert a.size == len(payload)
+            assert a.checksum == hashlib.sha256(payload).hexdigest()
+            # Content written to disk matches the source.
+            assert reg.read_asset(a) == payload
+        finally:
+            db.close()
