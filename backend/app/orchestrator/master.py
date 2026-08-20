@@ -8,6 +8,7 @@ from app.core.audit import audit_log
 from app.core.db import session_scope
 from app.models import JobRun, JobTask, Series
 from app.orchestrator.checkpoints import get_latest_valid
+from app.orchestrator.fallback import execute_with_fallback
 from app.registries.capability_matrix import role_for_task
 from app.registries.provider_registry import ProviderRegistry
 
@@ -55,17 +56,20 @@ def run_pipeline(db: Session, series_id: int, dry_run: bool = False) -> JobRun:
             continue
 
         role = role_for_task(task.task_type)
-        provider = registry.select(role, {"language": (task.payload or {}).get("language")}) if role else None
-        if provider is None:
-            task.status = "failed"
-            task.error = f"No provider available for role '{role}'"
-            db.commit()
-            audit_log(db, None, "task.failed", "job_task", task.id, {"error": task.error})
-            continue
         try:
             task.status = "running"
             db.commit()
-            execute_task(db, task, provider)
+
+            def _run(provider) -> bool:
+                execute_task(db, task, provider)
+                return True
+
+            execute_with_fallback(
+                registry,
+                role,
+                {"language": (task.payload or {}).get("language")},
+                _run,
+            )
             done += 1
         except Exception as exc:  # noqa: BLE001
             task.status = "failed"
@@ -74,7 +78,7 @@ def run_pipeline(db: Session, series_id: int, dry_run: bool = False) -> JobRun:
             audit_log(db, None, "task.failed", "job_task", task.id, {"error": str(exc)})
 
     run.done_tasks = sum(1 for t in tasks if t.status == "succeeded")
-    run.total_cost = sum(t.cost for t in tasks)
+    run.total_cost = sum(t.cost or 0.0 for t in tasks)
     failed = [t for t in tasks if t.status == "failed"]
     run.status = "failed" if failed else "done"
     if failed:
