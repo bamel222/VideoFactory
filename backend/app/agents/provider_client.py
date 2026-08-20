@@ -1,20 +1,26 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
-import wave
+from urllib.parse import urljoin
 
 import httpx
 from sqlalchemy import select
 
 from app.agents.ffmpeg_utils import generate_image_png, generate_test_video, generate_tone_wav, ffmpeg_available, probe_duration, run_ffmpeg
 from app.core.config import get_settings
+from app.core.encryption import decrypt_secret
 from app.core.ssrf import validate_ssrf_safe
-from app.models import Checkpoint, JobTask, Provider
+from app.models import JobTask, Provider
 
 settings = get_settings()
 MEDIA_ROOT = os.path.join(settings.data_dir, "media")
+
+# Stock footage download limits.
+MAX_STOCK_DOWNLOAD_BYTES = 500 * 1024 * 1024  # 500 MB cap
+MAX_REDIRECTS = 5
 
 
 def _guard_url(url: str) -> str:
@@ -83,7 +89,7 @@ class MockProviderClient:
 
     def _topic(self, task) -> str:
         payload = task.payload or {}
-        return payload.get("topic") or task.series_title if hasattr(task, "series_title") else (payload.get("topic") or "un sujet")
+        return payload.get("topic") or "un sujet"
 
     def _slug(self, task) -> str:
         topic = self._topic(task)
@@ -198,7 +204,10 @@ class MockProviderClient:
         if ffmpeg_available():
             generate_image_png(path, color="0x" + hashlib.sha1(subtype.encode()).hexdigest()[:6])
         else:
-            generate_tone_wav(path.replace(".png", ".wav"), 0.2)
+            # Without ffmpeg we fall back to an audio file; return the real path
+            # so downstream consumers don't reference a phantom file.
+            path = path.replace(".png", ".wav")
+            generate_tone_wav(path, 0.2)
         return {"type": "image", "path": path, "subtype": subtype}
 
     def _video(self, task) -> dict:
@@ -206,7 +215,9 @@ class MockProviderClient:
         if ffmpeg_available():
             generate_test_video(path, 8.0)
         else:
-            generate_tone_wav(path.replace(".mp4", ".wav"), 8.0)
+            # Without ffmpeg we fall back to an audio file; return the real path.
+            path = path.replace(".mp4", ".wav")
+            generate_tone_wav(path, 8.0)
         return {"type": "video", "path": path, "duration_s": 8.0}
 
     def _clip_assembly(self, task) -> dict:
@@ -351,7 +362,7 @@ class RealProviderClient:
         path = os.path.join(MEDIA_ROOT, "real", f"img_{task.id}_{(task.payload or {}).get('subtype', 'frame')}.png")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
-            f.write(__import__("base64").b64decode(b64))
+            f.write(base64.b64decode(b64))
         return {"type": "image", "path": path, "subtype": (task.payload or {}).get("subtype", "frame")}
 
     def _source_text(self, task) -> str:
@@ -372,7 +383,7 @@ class StockVideoClient:
     def __init__(self, provider: Provider, db=None):
         self.provider = provider
         self.db = db
-        self.api_key = __import__("app.core.encryption", fromlist=["decrypt_secret"]).decrypt_secret(provider.api_key_encrypted)
+        self.api_key = decrypt_secret(provider.api_key_encrypted)
 
     def generate(self, task) -> dict:
         query = (task.payload or {}).get("prompt") or (task.payload or {}).get("topic") or "nature"
@@ -407,7 +418,7 @@ class StockVideoClient:
             for f in files:
                 if (f.get("width") or 0) >= 640 and (f.get("height") or 0) < (f.get("width") or 0) + 1:
                     return f["link"]
-        return videos[0]["video_files"][0]["link"]
+        raise RuntimeError("Aucun fichier vidéo exploitable (>=640px paysage) dans les résultats Pexels")
 
     def _pixabay(self, task, query: str, duration: float) -> dict:
         if not self.api_key:
@@ -428,21 +439,41 @@ class StockVideoClient:
         return self._download_trim(link, path, duration, task)
 
     def _download_trim(self, url: str, path: str, duration: float, task) -> dict:
-        _guard_url(url)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = path + ".download"
-        with httpx.stream("GET", url, follow_redirects=True, timeout=120) as r:
-            r.raise_for_status()
-            with open(tmp, "wb") as f:
-                for chunk in r.iter_bytes():
-                    f.write(chunk)
-        run_ffmpeg(
-            ["-y", "-i", tmp, "-t", f"{duration}", "-vf",
-             "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1",
-             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p", path],
-            timeout=300,
-        )
-        os.remove(tmp)
+        try:
+            current_url = url
+            # Follow redirects manually so every hop is SSRF-validated and
+            # the payload size is capped before writing to disk.
+            for _ in range(MAX_REDIRECTS + 1):
+                _guard_url(current_url)
+                with httpx.stream("GET", current_url, follow_redirects=False, timeout=120) as r:
+                    if r.is_redirect:
+                        location = r.headers.get("location")
+                        if not location:
+                            raise RuntimeError("Redirection sans en-tête Location")
+                        current_url = urljoin(current_url, location)
+                        continue
+                    r.raise_for_status()
+                    total = 0
+                    with open(tmp, "wb") as f:
+                        for chunk in r.iter_bytes():
+                            total += len(chunk)
+                            if total > MAX_STOCK_DOWNLOAD_BYTES:
+                                raise RuntimeError("Téléchargement stock trop volumineux (limite dépassée)")
+                            f.write(chunk)
+                    break
+            else:
+                raise RuntimeError("Trop de redirections pendant le téléchargement")
+            run_ffmpeg(
+                ["-y", "-i", tmp, "-t", f"{duration}", "-vf",
+                 "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1",
+                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p", path],
+                timeout=300,
+            )
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
         return {"type": "video", "path": path, "duration_s": duration, "stock": True}
 
     def _slug(self, task) -> str:
