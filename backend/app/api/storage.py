@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.audit import audit_log
+from app.core.config import get_settings
 from app.core.filevalidation import deep_validate_media, sanitize_filename, validate_file_upload
 from app.core.security import require_permission
 from app.models import Asset, User
@@ -13,6 +14,27 @@ from app.registries.storage_registry import StorageRegistry
 from app.schemas.provider import StorageCreate, StorageUpdate
 
 router = APIRouter(prefix="/storage", tags=["storage"])
+
+_CHUNK_SIZE = 1024 * 1024  # 1 MB
+
+
+async def _read_upload_capped(file: UploadFile, max_bytes: int) -> bytes:
+    """Stream the upload in chunks and reject early if it exceeds `max_bytes`.
+
+    Prevents an unbounded `file.read()` from loading an arbitrarily large body
+    into memory before the size limit is checked.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(413, "File exceeds the upload size limit")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _reg(db: Session, user: User) -> StorageRegistry:
@@ -68,8 +90,10 @@ def healthcheck_storage(storage_id: int, db: Session = Depends(get_db), user: Us
 
 @router.post("/upload")
 async def upload_asset(file: UploadFile, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    data = await file.read()
+    settings = get_settings()
     filename = sanitize_filename(file.filename or "asset.bin")
+    # Read with a cap applied during streaming (not after loading into RAM).
+    data = await _read_upload_capped(file, settings.max_upload_mb * 1024 * 1024)
     try:
         meta = validate_file_upload(filename, data)
         deep_validate_media(data, meta["extension"])

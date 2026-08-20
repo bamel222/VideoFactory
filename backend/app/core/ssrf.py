@@ -45,8 +45,18 @@ def is_private_ip(host: str) -> bool:
 def validate_ssrf_safe(url: str) -> None:
     """Reject URLs targeting private/internal networks (SSRF guard).
 
-    Resolves the hostname and validates every resolved address, which defeats
-    DNS-rebinding and hostname-obfuscation tricks (e.g. 169.254.169.254.nip.io).
+    Resolves the hostname and validates *every* resolved address, which defeats
+    hostname-obfuscation tricks (e.g. 169.254.169.254.nip.io) and mitigates
+    DNS-rebinding for the common case.
+
+    Limitation (TOCTOU): the address set is validated at call time, but the
+    actual connection is opened later by the HTTP client, which re-resolves the
+    name. A determined attacker who controls DNS for the target host can still
+    rebind between validation and connect. Fully closing this window requires
+    pinning the connection to the pre-validated IP while preserving TLS SNI —
+    which most provider APIs do not support cleanly. Callers that follow
+    redirects (see StockVideoClient._download_trim) re-validate every hop to
+    minimize exposure.
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):

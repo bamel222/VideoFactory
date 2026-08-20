@@ -13,6 +13,11 @@ settings = get_settings()
 ROLE_ORDER = {"owner": 3, "admin": 2, "reviewer": 1}
 ROLES = ("owner", "admin", "reviewer")
 
+
+def role_at_least(role: str, minimum: str) -> bool:
+    """True when `role` is at least as privileged as `minimum` (owner > admin > reviewer)."""
+    return ROLE_ORDER.get(role, 0) >= ROLE_ORDER.get(minimum, 0)
+
 # Action matrix: role -> allowed actions
 PERMISSIONS: dict[str, set[str]] = {
     "owner": {

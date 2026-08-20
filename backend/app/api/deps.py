@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.security import decode_token, require_permission
+from app.core.security import decode_token, require_permission, role_at_least
 from app.models import User
 
 
@@ -32,6 +32,17 @@ def require_perm(permission: str):
     return _dep
 
 
-require_owner = require_perm("roles.manage")
-require_admin = require_perm("providers.manage")
-require_reviewer = require_perm("content.read")
+def require_role(minimum: str):
+    """Dependency that grants access to any role at least `minimum` (owner > admin > reviewer)."""
+
+    def _dep(user: User = Depends(get_current_user)) -> User:
+        if not role_at_least(user.role, minimum):
+            raise HTTPException(status_code=403, detail=f"Role '{user.role}' is below '{minimum}'")
+        return user
+
+    return _dep
+
+
+require_owner = require_role("owner")
+require_admin = require_role("admin")
+require_reviewer = require_role("reviewer")
