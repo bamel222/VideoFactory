@@ -41,6 +41,17 @@ services:
       DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      ALLOW_PRIVATE_STORAGE_ENDPOINTS: ${ALLOW_PRIVATE_STORAGE_ENDPOINTS:-false}
     depends_on:
       redis:
         condition: service_healthy
@@ -59,13 +70,31 @@ services:
     restart: always
     command: ["python", "-m", "app.workers.runner"]
     environment:
+      ENVIRONMENT: production
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
     depends_on:
       redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: prod
+    restart: always
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - backend
 
   nginx:
     image: nginx:alpine
@@ -74,9 +103,9 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../frontend/.next:/var/www/frontend:ro
     depends_on:
       - backend
+      - frontend
 
 volumes:
   pgdata:
