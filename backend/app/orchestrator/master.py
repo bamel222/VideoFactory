@@ -6,15 +6,19 @@ from sqlalchemy.orm import Session
 from app.agents.base import execute_task
 from app.core.audit import audit_log
 from app.core.db import session_scope
-from app.models import JobRun, JobTask, Series
+from app.models import JobRun, JobTask, Series, User
 from app.orchestrator.checkpoints import get_latest_valid
 from app.orchestrator.fallback import execute_with_fallback
 from app.registries.capability_matrix import role_for_task
 from app.registries.provider_registry import ProviderRegistry
 
 
-def run_pipeline(db: Session, series_id: int, dry_run: bool = False) -> JobRun:
-    """Execute all pending tasks of a series in dependency order (or simulate if dry_run)."""
+def run_pipeline(db: Session, series_id: int, dry_run: bool = False, requester: User | None = None) -> JobRun:
+    """Execute all pending tasks of a series in dependency order (or simulate if dry_run).
+
+    `requester` is the user who triggered the run; when provided (and not a dry
+    run), per-episode + series-recap notifications are dispatched at the end.
+    """
     series = db.get(Series, series_id)
     if not series:
         raise LookupError(f"Series {series_id} not found")
@@ -93,6 +97,15 @@ def run_pipeline(db: Session, series_id: int, dry_run: bool = False) -> JobRun:
             ep.status = "review"
         series.status = "produced"
         db.commit()
+
+    # Non-blocking notifications (per-episode + recap). Never raises.
+    if requester is not None and not dry_run:
+        try:
+            from app.notifications.dispatcher import notify_pipeline_outcome
+
+            notify_pipeline_outcome(db, requester, series, tasks)
+        except Exception:  # noqa: BLE001
+            pass
     return run
 
 

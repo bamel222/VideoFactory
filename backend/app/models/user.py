@@ -19,6 +19,10 @@ class User(Base, TimestampMixin):
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), nullable=False, index=True)
     password_changed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Notification channel credentials (encrypted at rest, never exposed via API).
+    discord_webhook_url_encrypted: Mapped[str] = mapped_column(String(2000), default="")
+    telegram_bot_token_encrypted: Mapped[str] = mapped_column(String(1000), default="")
+    telegram_chat_id_encrypted: Mapped[str] = mapped_column(String(255), default="")
 
 
 class PasswordHistory(Base, TimestampMixin):

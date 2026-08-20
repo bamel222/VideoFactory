@@ -91,6 +91,35 @@ Le quota (`quota_bytes`) est vérifié **avant** l'upload (erreur `507` en cas d
 dépassement), et les chemins sont protégés contre le path traversal
 (`os.path.commonpath`).
 
+## Notifications (email / Discord / Telegram)
+
+À la fin d'une génération, l'utilisateur peut être notifié par **email**,
+**Discord** et/ou **Telegram** — les trois canaux sont indépendants et
+optionnels, et **aucun ne bloque jamais le pipeline** (envoi fire-and-forget).
+Par défaut, il reçoit une notification **par épisode** puis un **récapitulatif
+de série** listant le statut (réussi/échoué) de chaque épisode.
+
+- Le choix des canaux se fait **à chaque lancement** (cases à cocher au moment
+  de lancer le pipeline).
+- Les identifiants Discord (webhook URL) et Telegram (bot token + chat id) se
+  configurent dans **Paramètres** (chiffrés en base, jamais ré-affichés).
+- L'email de destination est celui du compte (`user.email`).
+
+### Configuration email (variables d'environnement)
+
+| Variable | Valeur | Rôle |
+|---|---|---|
+| `EMAIL_PROVIDER` | `resend` \| `sendgrid` \| `smtp` \| vide | Fournisseur actif (vide = désactivé) |
+| `EMAIL_FROM` | `Video Factory AI <no-reply@…>` | Expéditeur |
+| `RESEND_API_KEY` | … | Clé API Resend |
+| `SENDGRID_API_KEY` | … | Clé API SendGrid |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` | … | Relais SMTP générique (fonctionne aussi avec Resend/SendGrid) |
+| `APP_BASE_URL` | `http://localhost:3000` | Base des liens cliquables dans les notifications |
+
+Sans `EMAIL_PROVIDER`, les notifications email sont simplement ignorées (les
+webhooks Discord/Telegram restent actifs). Les webhooks Discord/Telegram sont
+gratuits et illimités.
+
 ## Documentation
 
 - Spécification: docs/spec.md

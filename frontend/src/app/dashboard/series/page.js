@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, can } from "@/lib/api";
-import { PageHeader, SkeletonRows, Field, useToast } from "@/components/ui";
+import { PageHeader, SkeletonRows, Field, Modal, useToast } from "@/components/ui";
 
 function StatusBadge({ status }) {
   const map = {
@@ -25,13 +25,40 @@ const MODE_OPTIONS = {
 };
 
 const DEFAULT_MODE = { documentary: "images", cartoon: "video" };
-const EMPTY_FORM = { title: "", topic: "", kind: "documentary", generation_mode: "images", duration_minutes: 26, planned_episodes: 1, language: "fr", based_on_facts: false };
+const EMPTY_NOTIFY = { email: false, discord: false, telegram: false };
+const EMPTY_FORM = { title: "", topic: "", kind: "documentary", generation_mode: "images", duration_minutes: 26, planned_episodes: 1, language: "fr", based_on_facts: false, notify: { ...EMPTY_NOTIFY } };
+
+function NotifyCheckboxes({ value, onChange }) {
+  return (
+    <div className="field">
+      <label>Notifier à la fin (optionnel)</label>
+      <div className="row" style={{ gap: 16, marginTop: 4, flexWrap: "wrap" }}>
+        <label className="row" style={{ alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={value.email} onChange={(e) => onChange({ ...value, email: e.target.checked })} />
+          <span>Email</span>
+        </label>
+        <label className="row" style={{ alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={value.discord} onChange={(e) => onChange({ ...value, discord: e.target.checked })} />
+          <span>Discord</span>
+        </label>
+        <label className="row" style={{ alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={value.telegram} onChange={(e) => onChange({ ...value, telegram: e.target.checked })} />
+          <span>Telegram</span>
+        </label>
+        <small className="faint" style={{ alignSelf: "center" }}>
+          Aucun choix ne bloque la génération.
+        </small>
+      </div>
+    </div>
+  );
+}
 
 export default function SeriesPage() {
   const [series, setSeries] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [launch, setLaunch] = useState(null); // { id, notify } when the run modal is open
   const { toast, toastError } = useToast();
 
   const load = async () => {
@@ -68,10 +95,30 @@ export default function SeriesPage() {
       if (type === "dryrun") {
         const r = await api(`/series/${id}/dry-run`, { method: "POST" });
         toast(`Dry run : ${r.report.tasks} tâches, coût estimé $${r.report.budget.estimated_cost} — ${r.report.ready_to_launch ? "prêt à lancer" : "risques détectés"}`);
-      } else {
-        const r = await api(`/series/${id}/run`, { method: "POST", body: JSON.stringify({ series_id: id, dry_run: false }) });
-        toast(`Pipeline : ${r.done_tasks}/${r.total_tasks} tâches, statut ${r.status}`);
       }
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function openLaunch(s) {
+    setLaunch({ id: s.id, notify: { email: s.notify_email, discord: s.notify_discord, telegram: s.notify_telegram } });
+  }
+
+  async function confirmLaunch() {
+    const { id, notify } = launch;
+    setError("");
+    setBusy(`run-${id}`);
+    try {
+      const r = await api(`/series/${id}/run`, {
+        method: "POST",
+        body: JSON.stringify({ series_id: id, dry_run: false, notify }),
+      });
+      toast(`Pipeline : ${r.done_tasks}/${r.total_tasks} tâches, statut ${r.status}`);
+      setLaunch(null);
       await load();
     } catch (err) {
       setError(err.message);
@@ -141,6 +188,7 @@ export default function SeriesPage() {
               </div>
             )}
           </div>
+          <NotifyCheckboxes value={form.notify} onChange={(n) => setForm({ ...form, notify: n })} />
         </form>
       </div>
 
@@ -173,7 +221,7 @@ export default function SeriesPage() {
                         {busy === `dryrun-${s.id}` ? "..." : "Dry run"}
                       </button>
                       {can("pipeline.run") && (
-                        <button className="small" disabled={busy === `run-${s.id}`} onClick={() => action(s.id, "run")}>
+                        <button className="small" disabled={busy === `run-${s.id}`} onClick={() => openLaunch(s)}>
                           {busy === `run-${s.id}` ? "..." : "Lancer"}
                         </button>
                       )}
@@ -184,6 +232,21 @@ export default function SeriesPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {launch && (
+        <Modal title="Lancer la génération" onClose={() => setLaunch(null)}>
+          <p className="muted" style={{ fontSize: 13 }}>
+            Choisissez comment être notifié à la fin de la génération. Vous recevrez une notification par épisode, puis un récapitulatif de la série.
+          </p>
+          <NotifyCheckboxes value={launch.notify} onChange={(n) => setLaunch({ ...launch, notify: n })} />
+          <div className="row" style={{ justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
+            <button className="secondary" onClick={() => setLaunch(null)}>Annuler</button>
+            <button disabled={busy === `run-${launch.id}`} onClick={confirmLaunch}>
+              {busy === `run-${launch.id}` ? "Lancement..." : "Lancer le pipeline"}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

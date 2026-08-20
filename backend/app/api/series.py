@@ -29,6 +29,9 @@ def _serialize(s: Series) -> dict:
         "duration_minutes": s.duration_minutes, "fact_check_enabled": s.fact_check_enabled,
         "business_score": s.business_score,
         "production_cost": s.production_cost, "continuity_pack_id": s.continuity_pack_id,
+        "notify_email": s.notify_email,
+        "notify_discord": s.notify_discord,
+        "notify_telegram": s.notify_telegram,
     }
 
 
@@ -57,6 +60,9 @@ def create_series(body: SeriesCreate, request: Request, db: Session = Depends(ge
         generation_mode=mode,
         duration_minutes=max(24, min(28, body.duration_minutes)),
         fact_check_enabled=bool(fact_check),
+        notify_email=bool(body.notify.email) if body.notify else False,
+        notify_discord=bool(body.notify.discord) if body.notify else False,
+        notify_telegram=bool(body.notify.telegram) if body.notify else False,
     )
     db.add(series)
     db.flush()
@@ -102,8 +108,13 @@ def run_series(body: PipelineRequest, series_id: int, request: Request, db: Sess
     if not require_permission(user.role, "pipeline.run"):
         raise HTTPException(403, "Owner or Admin only")
     series = _check(user, db.get(Series, series_id))
+    if body.notify is not None:
+        series.notify_email = body.notify.email
+        series.notify_discord = body.notify.discord
+        series.notify_telegram = body.notify.telegram
+        db.commit()
     audit_log(db, user.id, "pipeline.run", "series", series.id, {"dry_run": body.dry_run}, request.client.host if request.client else None)
-    run = run_pipeline(db, series.id, dry_run=body.dry_run)
+    run = run_pipeline(db, series.id, dry_run=body.dry_run, requester=user)
     return {"job_run_id": run.id, "status": run.status, "dry_run": run.dry_run, "total_tasks": run.total_tasks, "done_tasks": run.done_tasks, "total_cost": run.total_cost}
 
 

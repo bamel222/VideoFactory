@@ -27,6 +27,10 @@ class Series(Base, TimestampMixin):
     continuity_pack_id: Mapped[int] = mapped_column(ForeignKey("continuity_packs.id"), nullable=True)
     business_score: Mapped[float] = mapped_column(default=0.0, nullable=False)
     production_cost: Mapped[float] = mapped_column(default=0.0, nullable=False)
+    # Notification channels chosen at launch time (never block generation).
+    notify_email: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    notify_discord: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    notify_telegram: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     def effective_mode(self) -> str:
         """Resolve the generation mode, defaulting by kind for legacy records."""

@@ -64,6 +64,20 @@ class Settings(BaseSettings):
     pcloud_client_id: str = ""
     pcloud_app_secret: str = ""
 
+    # Notifications
+    # Active email provider: "" (disabled) | "resend" | "sendgrid" | "smtp".
+    email_provider: str = ""
+    email_from: str = "Video Factory AI <no-reply@videofactory.ai>"
+    resend_api_key: str = ""
+    sendgrid_api_key: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    # Base URL used to build clickable links in notifications.
+    app_base_url: str = "http://localhost:3000"
+
     # Behavior
     use_fake_providers: bool = True
     data_dir: str = "./data"

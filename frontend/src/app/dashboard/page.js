@@ -51,11 +51,12 @@ export default function DashboardPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [series, providers, jobs, billing] = await Promise.all([
+        const [series, providers, jobs, billing, queue] = await Promise.all([
           api("/series"),
           api("/providers"),
           api("/jobs"),
           api("/settings/billing"),
+          api("/review/queue"),
         ]);
         setStats({
           series: series.length,
@@ -64,6 +65,7 @@ export default function DashboardPage() {
           cost: billing.total_estimated_cost ?? 0,
           minutes: billing.total_minutes ?? 0,
           health: providers.filter((p) => p.healthy).length,
+          ready: (queue || []).length,
         });
       } catch (err) {
         toastError(err.message);
@@ -88,6 +90,7 @@ export default function DashboardPage() {
           <StatCard icon={Icons.jobs} value={stats.jobs} label="Jobs lancés" iconBg="linear-gradient(135deg,#6366f1,#a78bfa)" />
           <StatCard icon={Icons.cost} value={`$${stats.cost ?? "—"}`} label="Coût estimé" iconBg="linear-gradient(135deg,#f59e0b,#fbbf24)" />
           <StatCard icon={Icons.minutes} value={stats.minutes ?? "—"} label="Minutes produites" iconBg="linear-gradient(135deg,#06b6d4,#22d3ee)" />
+          <StatCard icon={Icons.jobs} value={stats.ready ?? "—"} label="Épisodes prêts" iconBg="linear-gradient(135deg,#22c55e,#4ade80)" />
         </div>
       )}
 

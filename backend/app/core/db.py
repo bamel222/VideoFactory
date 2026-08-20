@@ -70,7 +70,14 @@ def init_db() -> None:
     inspector = inspect(engine)
     tables = inspector.get_table_names()
     if tables and "alembic_version" not in tables:
-        # Pre-Alembic database: adopt the existing schema without re-creating it.
-        command.stamp(cfg, "head")
+        # Pre-Alembic database: adopt the existing schema (which matches the
+        # base migration) by stamping it at the base revision, then apply any
+        # additive migrations on top (so new columns are added, not skipped).
+        from alembic.script import ScriptDirectory
+
+        script = ScriptDirectory.from_config(cfg)
+        base_rev = script.get_base()
+        command.stamp(cfg, base_rev.revision)
+        command.upgrade(cfg, "head")
     else:
         command.upgrade(cfg, "head")

@@ -9,6 +9,15 @@ MODE_LABELS = {
 }
 
 
+class NotifyPrefs(BaseModel):
+    """Notification channels selected at launch. Any combination is allowed;
+    none of them ever blocks the pipeline."""
+
+    email: bool = False
+    discord: bool = False
+    telegram: bool = False
+
+
 class SeriesCreate(BaseModel):
     title: str = Field(max_length=500)
     topic: str = Field(default="", max_length=3000)
@@ -18,6 +27,7 @@ class SeriesCreate(BaseModel):
     generation_mode: str = ""
     duration_minutes: int = 26
     based_on_facts: bool = False
+    notify: NotifyPrefs | None = None
 
     @field_validator("duration_minutes")
     @classmethod
@@ -63,3 +73,4 @@ class DryRunRequest(BaseModel):
 class PipelineRequest(BaseModel):
     series_id: int
     dry_run: bool = False
+    notify: NotifyPrefs | None = None

@@ -91,10 +91,11 @@ def root():
 
 
 # Routers
-from app.api import audit, auth, jobs, monetization, providers, publishing, review, seo, series, settings as settings_api, storage, users  # noqa: E402
+from app.api import audit, auth, jobs, monetization, notifications, providers, publishing, review, seo, series, settings as settings_api, storage, users  # noqa: E402
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(providers.router, prefix="/api/v1")
 app.include_router(storage.router, prefix="/api/v1")
 app.include_router(series.router, prefix="/api/v1")
