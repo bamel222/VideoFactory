@@ -53,7 +53,13 @@ def execute_task(db: Session, task: JobTask, provider: Provider) -> JobTask:
         elif path:
             storage_ref = path
 
-    content_hash = hashlib.sha256(json.dumps(result, default=str).encode()).hexdigest()
+    # Dedupe on the produced file's bytes when available, else on the result payload.
+    produced_path = result.get("path") if isinstance(result, dict) else None
+    if produced_path and os.path.exists(produced_path):
+        with open(produced_path, "rb") as f:
+            content_hash = hashlib.sha256(f.read()).hexdigest()
+    else:
+        content_hash = hashlib.sha256(json.dumps(result, default=str).encode()).hexdigest()
     units = _estimate_units(task)
     cost = provider.cost_per_unit * units if provider.cost_per_unit else 0.0
 

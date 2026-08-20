@@ -17,7 +17,8 @@ STORAGE_ROOT = os.path.join(settings.data_dir, "storage")
 SIZE = "1280x720"
 FPS = 24
 MEDIA_TASK_TYPES = ("image_generate", "video_generate", "stock_video")
-AUDIO_TASK_TYPES = ("tts_voice", "music_generate")
+NARRATION_TASK_TYPES = ("tts_voice",)
+MUSIC_TASK_TYPES = ("music_generate",)
 
 
 def _resolve_path(cp: Checkpoint) -> str | None:
@@ -57,7 +58,7 @@ def collect_episode_media(db: Session, episode_id: int, mode: str) -> dict:
         .order_by(JobTask.sequence.asc())
         .all()
     )
-    by_type: dict[str, list] = {"image": [], "video": [], "audio": [], "subtitle": []}
+    by_type: dict[str, list] = {"image": [], "video": [], "narration": [], "music": [], "subtitle": []}
     for t in tasks:
         if not t.checkpoint_id:
             continue
@@ -71,14 +72,17 @@ def collect_episode_media(db: Session, episode_id: int, mode: str) -> dict:
             by_type["image"].append(path)
         elif t.task_type in ("video_generate", "stock_video"):
             by_type["video"].append(path)
-        elif t.task_type in AUDIO_TASK_TYPES:
-            by_type["audio"].append(path)
+        elif t.task_type in NARRATION_TASK_TYPES:
+            by_type["narration"].append(path)
+        elif t.task_type in MUSIC_TASK_TYPES:
+            by_type["music"].append(path)
         elif t.task_type == "subtitle":
             by_type["subtitle"].append(path)
     return {
         "images": by_type["image"],
         "clips": by_type["video"],
-        "audio": by_type["audio"],
+        "narration": by_type["narration"],
+        "music": by_type["music"],
         "subtitles": by_type["subtitle"],
         "raw": _task_output(db, episode_id, "clip_assembly"),
     }
@@ -177,30 +181,37 @@ def mix_audio(
     out: str,
     burn_subs: bool = True,
 ) -> str:
-    """Mix narration + music over the visual track and optionally burn subtitles."""
+    """Mix narration + music over the visual track and optionally burn subtitles.
+
+    Narration is padded to the full video length and music loops, so the final
+    audio always matches the visual duration (no silent tail when the narration
+    is shorter than the video).
+    """
     inputs = ["-y", "-i", visual]
     for n in narration_paths:
         inputs += ["-i", n]
     for m in music_paths:
         inputs += ["-stream_loop", "-1", "-i", m]
 
-    # Audio input indices: narration first (index 1..), then music
-    audio_specs: list[tuple[int, float]] = []
-    idx = 1
-    for _ in narration_paths:
-        audio_specs.append((idx, 1.0))
-        idx += 1
-    for _ in music_paths:
-        audio_specs.append((idx, 0.18))
-        idx += 1
-
     filters: list[str] = []
     labels: list[str] = []
-    for input_idx, gain in audio_specs:
-        label = f"a{input_idx - 1}"
-        filters.append(f"[{input_idx}:a]volume={gain}[{label}]")
-        labels.append(label)
 
+    # Narration inputs (indices 1..N): pad to full length, full volume.
+    idx = 1
+    for _ in narration_paths:
+        label = f"a{idx - 1}"
+        filters.append(f"[{idx}:a]apad,volume=1.0[{label}]")
+        labels.append(label)
+        idx += 1
+
+    # Music inputs (indices N+1..): looped, low volume.
+    for _ in music_paths:
+        label = f"a{idx - 1}"
+        filters.append(f"[{idx}:a]volume=0.18[{label}]")
+        labels.append(label)
+        idx += 1
+
+    # Visual: burn subtitles or pass through.
     if burn_subs and srt_path and os.path.exists(srt_path):
         filters.append(f"[0:v]subtitles='{_escape_subtitles(srt_path)}'[vsub]")
         vlabel = "vsub"
@@ -208,18 +219,23 @@ def mix_audio(
         filters.append("[0:v]null[vnull]")
         vlabel = "vnull"
 
+    # Mix all audio tracks at the longest duration; -shortest caps to the video.
+    if labels:
+        amix_inputs = "".join(f"[{l}]" for l in labels)
+        filters.append(
+            f"{amix_inputs}amix=inputs={len(labels)}:duration=longest:normalize=0[amix]"
+        )
+
     cmd = ["-y", *inputs, "-filter_complex", ";".join(filters)]
     cmd += ["-map", f"[{vlabel}]"]
     if labels:
-        amix = "".join(f"[{l}]" for l in labels) + f"amix=inputs={len(labels)}:duration=first:normalize=0[amix]"
-        filters.append(amix)
-        cmd = ["-y", *inputs, "-filter_complex", ";".join(filters)]
-        cmd += ["-map", f"[{vlabel}]", "-map", "[amix]", "-c:a", "aac", "-b:a", "192k"]
-    # Without narration we rely on the looping music + -shortest to cap the length.
-    # With narration, the video defines the duration (audio padded with silence).
+        cmd += ["-map", "[amix]", "-c:a", "aac", "-b:a", "192k"]
     cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p"]
-    if not narration_paths:
-        cmd += ["-shortest"]
+
+    # Cap the output to the visual duration (narration is padded, music loops).
+    duration = probe_duration(visual)
+    if duration > 0:
+        cmd += ["-t", f"{duration:.3f}"]
     cmd += [out]
 
     run_ffmpeg(cmd, timeout=1800)
@@ -233,5 +249,12 @@ def build_episode_video(db: Session, episode_id: int, mode: str, raw_out: str, f
         build_slideshow(media["images"], raw_out, dur_each=12.0)
     else:
         concat_videos(media["clips"], raw_out)
-    mix_audio(raw_out, media["audio"][:1], media["audio"][1:], media["subtitles"][0] if media["subtitles"] else None, final_out, burn_subs=burn_subs)
+    mix_audio(
+        raw_out,
+        media["narration"],
+        media["music"],
+        media["subtitles"][0] if media["subtitles"] else None,
+        final_out,
+        burn_subs=burn_subs,
+    )
     return raw_out, final_out

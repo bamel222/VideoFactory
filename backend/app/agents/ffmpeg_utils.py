@@ -78,10 +78,9 @@ def generate_test_video(path: str, duration_s: float, size: str = "640x360", col
 
 
 def probe_duration(path: str) -> float:
-    import json
-
     binary = ffmpeg_binary()
-    cmd = [binary, "-hide_banner", "-i", path, "-f", "null", "-"]
+    # Read the container header only (no full decode) — fast even on long files.
+    cmd = [binary, "-hide_banner", "-i", path]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     stderr = result.stderr
     for line in stderr.splitlines():
