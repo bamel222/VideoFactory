@@ -39,6 +39,25 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
+    # Fail fast in production when security secrets are still at their defaults
+    # (otherwise JWTs could be forged and encrypted secrets decrypted).
+    insecure = settings.insecure_defaults()
+    if insecure:
+        if settings.environment in ("prod", "production"):
+            raise RuntimeError(
+                "Configuration sécurité invalide : "
+                f"{', '.join(insecure)} sont encore à leur valeur par défaut. "
+                "Définissez-les via les variables d'environnement avant de démarrer en production."
+            )
+        import logging
+
+        logging.getLogger("video_factory").warning(
+            "SECURITY WARNING: %s sont à leur valeur par défaut (démarrage en %s). "
+            "Surchargez-les avant tout déploiement.",
+            ", ".join(insecure),
+            settings.environment,
+        )
+
     os.makedirs(settings.data_dir, exist_ok=True)
     os.makedirs(os.path.join(settings.data_dir, "storage"), exist_ok=True)
     os.makedirs(os.path.join(settings.data_dir, "media"), exist_ok=True)

@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     use_fake_providers: bool = True
     data_dir: str = "./data"
     montage_enabled: bool = True
+    # Allow storage backends (S3/MinIO/Supabase) to target private/internal
+    # endpoints. Off by default for SSRF safety; enable only for local MinIO.
+    allow_private_storage_endpoints: bool = False
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -77,7 +80,20 @@ class Settings(BaseSettings):
     def allowed_extensions_list(self) -> list[str]:
         return [e.strip().lower() for e in self.allowed_extensions.split(",") if e.strip()]
 
+    def insecure_defaults(self) -> list[str]:
+        """Return the env-var names of secrets still set to their insecure defaults."""
+        return [name for name, default in DEFAULT_SECRET_VALUES.items()
+                if getattr(self, name.lower()) == default]
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+# Insecure fallback values. A production deployment MUST override these via
+# environment; otherwise JWTs can be forged and encrypted secrets decrypted.
+DEFAULT_SECRET_VALUES = {
+    "ENCRYPTION_KEY": "change-me-32-bytes-min-secret-key",
+    "JWT_SECRET": "change-me-jwt-secret",
+}

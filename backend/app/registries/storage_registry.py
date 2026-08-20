@@ -51,7 +51,12 @@ class LocalStorageAdapter(StorageAdapter):
         path = path.lstrip("/")
         abs_path = os.path.abspath(os.path.join(self.root, path))
         root_abs = os.path.abspath(self.root)
-        if not abs_path.startswith(root_abs):
+        # Compare canonical common path (not a string prefix) to block traversal.
+        try:
+            common = os.path.commonpath([root_abs, abs_path])
+        except ValueError:
+            raise ValueError("Path traversal blocked")
+        if common != root_abs:
             raise ValueError("Path traversal blocked")
         return abs_path
 
@@ -173,6 +178,7 @@ class SupabaseStorageAdapter(StorageAdapter):
 
 def build_adapter(storage: StorageBackend) -> StorageAdapter:
     config = json.loads(decrypt_secret(storage.config_encrypted) or "{}")
+    _validate_storage_config(storage.kind, config)
     if storage.kind == "local":
         return LocalStorageAdapter(root=config.get("root"))
     if storage.kind == "nas":
@@ -184,6 +190,34 @@ def build_adapter(storage: StorageBackend) -> StorageAdapter:
     if storage.kind == "pcloud":
         raise HTTPException(501, "pCloud adapter requires pCloud SDK (configured separately)")
     raise HTTPException(400, f"Unknown storage kind: {storage.kind}")
+
+
+def _validate_storage_config(kind: str, config: dict) -> None:
+    """SSRF-guard outbound storage endpoints (Supabase URL, S3/MinIO endpoint).
+
+    Skipped when settings.allow_private_storage_endpoints is enabled (e.g. a
+    local MinIO instance). Endpoints without an http(s) scheme are ignored.
+    """
+    from app.core.ssrf import validate_ssrf_safe
+
+    if settings.allow_private_storage_endpoints:
+        return
+
+    urls: list[str] = []
+    if kind == "supabase":
+        urls.append(config.get("url") or settings.supabase_url)
+    elif kind in ("s3", "r2", "b2", "minio"):
+        urls.append(config.get("endpoint_url"))
+
+    for u in urls:
+        if not u:
+            continue
+        if not u.startswith(("http://", "https://")):
+            continue
+        try:
+            validate_ssrf_safe(u)
+        except ValueError as exc:
+            raise HTTPException(400, f"Endpoint de stockage invalide (SSRF): {exc}")
 
 
 class StorageRegistry:
@@ -272,6 +306,13 @@ class StorageRegistry:
         checksum = hashlib.sha256(data).hexdigest()
         stored: list[Asset] = []
         for i, backend in enumerate(backends[: max(replicas, 1)]):
+            # Enforce the backend quota before uploading (0 == unlimited).
+            if backend.quota_bytes and backend.used_bytes + len(data) > backend.quota_bytes:
+                raise HTTPException(
+                    507,
+                    f"Quota de stockage dépassé sur '{backend.name}' "
+                    f"({backend.used_bytes + len(data)}/{backend.quota_bytes} octets)",
+                )
             adapter = build_adapter(backend)
             remote_path = adapter.upload(f"{path}", data, content_type)
             backend.used_bytes += len(data)

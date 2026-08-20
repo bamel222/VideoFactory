@@ -30,6 +30,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
+      ENVIRONMENT: production
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
