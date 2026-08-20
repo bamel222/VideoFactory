@@ -19,7 +19,8 @@ def run_dry_run(db: Session, series: Series) -> DryRun:
     registry = ProviderRegistry(db, series.workspace_id)
 
     by_role: dict[str, dict] = {}
-    missing: list[str] = []
+    missing: list[str] = []          # no active provider at all for this role
+    quota_exhausted: list[str] = []  # provider(s) exist but none with remaining quota
     for task in tasks:
         role = role_for_task(task.task_type)
         if role is None:
@@ -27,11 +28,17 @@ def run_dry_run(db: Session, series: Series) -> DryRun:
         entry = by_role.setdefault(role, {"count": 0, "provider": None, "quota_ok": True})
         entry["count"] += 1
         if entry["provider"] is None:
-            provider = registry.select(role, task.payload.get("language") and {"language": task.payload["language"]} or None)
+            lang = (task.payload or {}).get("language")
+            requirements = {"language": lang} if lang else None
+            provider = registry.select(role, requirements)
             entry["provider"] = provider.name if provider else None
             if provider is None:
-                entry["quota_ok"] = False
-                missing.append(role)
+                active = [p for p in registry.list() if p.role == role and p.status == "active"]
+                if active:
+                    entry["quota_ok"] = False
+                    quota_exhausted.append(role)
+                else:
+                    missing.append(role)
 
     from app.orchestrator.budget import forecast_series
 
@@ -46,6 +53,7 @@ def run_dry_run(db: Session, series: Series) -> DryRun:
         "queues": sorted({t.queue for t in tasks}),
         "roles": by_role,
         "missing_providers": missing,
+        "quota_exhausted": quota_exhausted,
         "budget": {
             "minutes_video": forecast.minutes_video,
             "tts_chars": forecast.tts_chars,
@@ -56,7 +64,7 @@ def run_dry_run(db: Session, series: Series) -> DryRun:
         },
         "risks": forecast.risks,
         "quotas_ok": forecast.quotas_ok,
-        "ready_to_launch": not missing and forecast.quotas_ok,
+        "ready_to_launch": not missing and not quota_exhausted and forecast.quotas_ok,
         "note": "Simulation terminée. Aucun provider n'a été appelé, aucune vidéo générée.",
     }
 

@@ -5,11 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.models import BudgetForecast, Episode, Scene, Segment, Series
 
-CHARS_PER_SECOND = 15.0
-SECONDS_PER_WORD_TTS = 5.0
-GPU_FACTOR = 0.02  # gpu hours per video-second
-STORAGE_MB_PER_VIDEO_SECOND = 0.3
-AVG_WORDS_PER_SECOND = 2.0
+# Estimation constants (per second of final video).
+CHARS_PER_SECOND = 15.0  # characters of narration/TTS per video second
+GPU_FACTOR = 0.02  # GPU hours per video second
+STORAGE_MB_PER_VIDEO_SECOND = 0.3  # MB of storage per video second
 
 
 def _total_duration(db: Session, series_id: int) -> float:
@@ -36,17 +35,23 @@ def forecast_series(db: Session, series: Series, language: str = "fr", extra_lan
     storage_gb = duration * STORAGE_MB_PER_VIDEO_SECOND / 1024.0
     gpu_hours = duration * GPU_FACTOR
 
-    # Cost estimate from provider registry
+    # Cost estimate from provider registry.
+    #
+    # `cost_per_unit` is interpreted per natural unit for each role:
+    #   tts         -> per character
+    #   video       -> per GPU hour
+    #   storage     -> per GB
+    #   translation -> per translation
     from app.registries.provider_registry import ProviderRegistry
 
     registry = ProviderRegistry(db, series.workspace_id)
     cost = 0.0
-    cost += tts_chars / 1000.0 * _provider_cost(registry, "tts")
-    cost += gpu_hours * _provider_cost(registry, "video", 1.0)
-    cost += storage_gb * _provider_cost(registry, "storage", 1.0)
-    cost += translations * _provider_cost(registry, "translation")
+    cost += tts_chars * _active_provider_cost(registry, "tts")
+    cost += gpu_hours * _active_provider_cost(registry, "video")
+    cost += storage_gb * _active_provider_cost(registry, "storage")
+    cost += translations * _active_provider_cost(registry, "translation")
 
-    risks = _detect_risks(registry, duration, storage_gb, tts_chars)
+    risks = _detect_risks(db, series.workspace_id, registry, storage_gb, tts_chars)
 
     forecast = BudgetForecast(
         series_id=series.id,
@@ -65,19 +70,20 @@ def forecast_series(db: Session, series: Series, language: str = "fr", extra_lan
     return forecast
 
 
-def _provider_cost(registry, role: str, units: float = 1000.0) -> float:
+def _active_provider_cost(registry, role: str) -> float:
+    """Cost per unit of the highest-priority active provider for a role (0.0 if none)."""
     providers = [p for p in registry.list() if p.role == role and p.status == "active"]
     if not providers:
         return 0.0
     providers.sort(key=lambda p: p.priority)
-    return providers[0].cost_per_unit * units
+    return providers[0].cost_per_unit or 0.0
 
 
-def _detect_risks(registry, duration: float, storage_gb: float, tts_chars: int) -> list[dict]:
+def _detect_risks(db: Session, workspace_id: int, registry, storage_gb: float, tts_chars: int) -> list[dict]:
     risks: list[dict] = []
     from app.registries.storage_registry import StorageRegistry
 
-    storage_registry = StorageRegistry(registry.db, registry.workspace_id)
+    storage_registry = StorageRegistry(db, workspace_id)
     active_storage = [s for s in storage_registry.list() if s.status == "active"]
     total_quota = sum(s.quota_bytes for s in active_storage)
     if total_quota and total_quota < storage_gb * 1024**3:
