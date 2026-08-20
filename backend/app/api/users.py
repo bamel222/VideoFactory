@@ -15,8 +15,11 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("", response_model=list[UserOut])
-def list_users(db: Session = Depends(get_db), _: User = Depends(require_owner)):
-    return list(db.scalars(select(User).order_by(User.id)))
+def list_users(db: Session = Depends(get_db), owner: User = Depends(require_owner)):
+    # Scope to the caller's workspace only (multi-tenant isolation).
+    return list(
+        db.scalars(select(User).where(User.workspace_id == owner.workspace_id).order_by(User.id))
+    )
 
 
 @router.post("", response_model=UserOut)
@@ -53,8 +56,12 @@ def update_user(
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(404, "User not found")
+    if user.workspace_id != owner.workspace_id:
+        raise HTTPException(404, "User not found")
     if user.id == owner.id and body.active is False:
         raise HTTPException(400, "Cannot deactivate yourself")
+    if body.role is not None and body.role not in ("owner", "admin", "reviewer"):
+        raise HTTPException(400, "Invalid role")
     for field, value in body.model_dump(exclude_unset=True).items():
         if value is None:
             continue
@@ -76,6 +83,8 @@ def update_user(
 def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), owner: User = Depends(require_owner)):
     user = db.get(User, user_id)
     if not user:
+        raise HTTPException(404, "User not found")
+    if user.workspace_id != owner.workspace_id:
         raise HTTPException(404, "User not found")
     if user.id == owner.id:
         raise HTTPException(400, "Cannot delete yourself")

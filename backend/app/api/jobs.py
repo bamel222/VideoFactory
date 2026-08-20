@@ -30,6 +30,10 @@ def get_run(run_id: int, db: Session = Depends(get_db), user: User = Depends(get
     run = db.get(JobRun, run_id)
     if not run:
         raise HTTPException(404, "Run not found")
+    # Enforce workspace isolation: a run is only visible within its own workspace.
+    series = db.get(Series, run.series_id)
+    if not series or series.workspace_id != user.workspace_id:
+        raise HTTPException(404, "Run not found")
     tasks = db.scalars(select(JobTask).where(JobTask.job_run_id == run.id).order_by(JobTask.sequence)).all()
     return {
         "id": run.id, "status": run.status, "kind": run.kind, "dry_run": run.dry_run,
