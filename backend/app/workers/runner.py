@@ -16,21 +16,34 @@ def process_queue(queue: str) -> None:
         return
     with session_scope() as db:
         from app.agents.base import execute_task
-        from app.models import JobTask
+        from app.models import JobTask, Series
+        from app.orchestrator.fallback import execute_with_fallback
         from app.registries.capability_matrix import role_for_task
 
         task = db.get(JobTask, task_id)
         if not task:
             return
-        series = db.get(__import__("app.models", fromlist=["Series"]).Series, task.series_id)
+        series = db.get(Series, task.series_id)
         registry = ProviderRegistry(db, series.workspace_id if series else 0)
         role = role_for_task(task.task_type)
-        provider = registry.select(role, {"language": (task.payload or {}).get("language")})
-        if provider is None:
+        try:
+            task.status = "running"
+            db.commit()
+
+            def _run(provider) -> bool:
+                execute_task(db, task, provider)
+                return True
+
+            execute_with_fallback(
+                registry,
+                role,
+                {"language": (task.payload or {}).get("language")},
+                _run,
+            )
+        except Exception as exc:  # noqa: BLE001
             task.status = "failed"
-            task.error = "No provider"
-            return
-        execute_task(db, task, provider)
+            task.error = str(exc)[:2000]
+            db.commit()
 
 
 def run_forever() -> None:
