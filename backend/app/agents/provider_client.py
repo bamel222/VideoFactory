@@ -140,14 +140,31 @@ class MockProviderClient:
 
     def _shorts_package(self, task) -> dict:
         platforms = ["youtube", "tiktok", "facebook"]
+        short_path = self._make_short(task)
         out = {}
         for p in platforms:
             out[p] = {
                 "captions": "CAPTION_SYNCED_HOOK (auto-generated)",
                 "cta": f"Abonnez-vous pour plus de vidéos sur {p}",
                 "metadata": {"format": "9:16", "duration_s": 30},
+                "asset_path": short_path,
             }
-        return {"type": "metadata", "platforms": out}
+        return {"type": "video", "path": short_path, "platforms": out}
+
+    def _make_short(self, task) -> str:
+        """Produce a real 9:16 vertical short (1080x1920) from the final episode video."""
+        short_path = os.path.join(MEDIA_ROOT, self._slug(task), f"episode_{task.episode_id}_short.mp4")
+        final = os.path.join(MEDIA_ROOT, self._slug(task), f"episode_{task.episode_id}_final.mp4")
+        if self._can_montage() and os.path.exists(final):
+            run_ffmpeg(
+                ["-y", "-i", final, "-t", "30",
+                 "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1",
+                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p", short_path],
+                timeout=600,
+            )
+        else:
+            generate_test_video(short_path, 8.0, size="1080x1920")
+        return short_path
 
     def _qa_check(self, task) -> dict:
         return {"type": "report", "content": "QA : continuité OK, voix stable, style conforme.", "passed": True, "checks": {"continuity": "ok", "audio": "ok", "subs": "ok"}}

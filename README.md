@@ -144,11 +144,18 @@ Ils sont chiffrés en base et jamais ré-affichés.
   (`app/agents/montage.py`). Les clips stock sont recadrés à la même résolution.
 - **Nettoyage automatique** : une fois une série générée avec succès, les
   fichiers **intermédiaires** (images, clips vidéo, audio, montage brut, sous-
-  titres par segment) sont supprimés. Sont conservés : la **vidéo finale**, les
-  **shorts**, le **SEO** et les **lignes de checkpoint** (métadonnées, ~1 Ko par
-  ligne — négligeables, et nécessaires à la reprise/idempotence). Le nettoyage ne
-  se déclenche qu'en cas de succès complet, pour conserver les intermédiaires
-  d'un épisode en échec en vue d'une reprise.
+  titres par segment) sont supprimés **à la fois du bucket et du disque local**.
+  La **vidéo finale** et les **shorts** (fichiers 9:16 réels) sont conservés dans
+  le **bucket** (unique source de vérité, téléchargeable via signed URL pour
+  YouTube/TikTok/etc.), tandis que leur copie locale sur le serveur est
+  supprimée pour économiser le disque. Les **lignes de checkpoint** (métadonnées,
+  ~1 Ko par ligne) sont toujours conservées pour la reprise/idempotence. Le
+  nettoyage ne se déclenche qu'en cas de succès complet, pour conserver les
+  intermédiaires d'un épisode en échec en vue d'une reprise.
+
+Le bucket de stockage peut être **S3, R2, B2, MinIO ou tout stockage compatible
+S3** (dont **OVHCloud Object Storage**) via l'adapter `S3CompatibleAdapter`
+(`boto3`), en plus de Supabase Storage et du stockage local.
 
 ## Documentation
 

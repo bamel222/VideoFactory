@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 
 def test_notification_profile_roundtrip(client, owner_token):
     # Initially nothing configured.
@@ -97,7 +99,7 @@ def test_secondary_notification_email(client, owner_token):
 
 def test_cleanup_removes_intermediates(client, owner_token, seeded_series):
     """After a successful run, intermediate media files are deleted while the
-    final video asset (final_assembly) is kept."""
+    final video and short assets (bucket) are kept; their local copies are removed."""
     from app.core.db import SessionLocal
     from app.models import Asset, Checkpoint, JobTask, Series
 
@@ -111,14 +113,6 @@ def test_cleanup_removes_intermediates(client, owner_token, seeded_series):
 
     db = SessionLocal()
     try:
-        s = db.get(Series, seeded_series)
-        # Final assembly assets must still exist.
-        final_assets = (
-            db.query(Asset)
-            .join(JobTask, JobTask.checkpoint_id.isnot(None))
-            .filter(JobTask.series_id == seeded_series, JobTask.task_type == "final_assembly")
-            .all()
-        )
         # Intermediate task types must no longer have their files/asset rows.
         for tt in ("image_generate", "video_generate", "tts_voice", "music_generate", "clip_assembly"):
             cps = (
@@ -129,9 +123,27 @@ def test_cleanup_removes_intermediates(client, owner_token, seeded_series):
             )
             for cp in cps:
                 if cp.content_ref:
-                    # The stored asset must have been removed.
                     remaining = db.query(Asset).filter(Asset.path == cp.content_ref).count()
                     assert remaining == 0, f"intermediate asset not cleaned for {tt}"
+
+        # Final deliverables: asset (bucket) KEPT, local file removed.
+        for tt in ("final_assembly", "shorts_package"):
+            cps = (
+                db.query(Checkpoint)
+                .join(JobTask, Checkpoint.task_id == JobTask.id)
+                .filter(JobTask.series_id == seeded_series, JobTask.task_type == tt)
+                .all()
+            )
+            assert cps, f"no {tt} checkpoint produced"
+            for cp in cps:
+                if cp.content_ref:
+                    # Bucket asset must still exist.
+                    kept = db.query(Asset).filter(Asset.path == cp.content_ref).count()
+                    assert kept >= 1, f"{tt} asset should be kept in the bucket"
+                # Local provider file must be gone.
+                local = (cp.metadata_json or {}).get("local_path")
+                if local:
+                    assert not os.path.exists(local), f"{tt} local file should be removed: {local}"
     finally:
         db.close()
 
