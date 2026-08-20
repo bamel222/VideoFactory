@@ -15,13 +15,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.db import Base, engine
+from app.core.db import init_db
 from app.main import app
 
 
 @pytest.fixture(scope="session")
 def client():
-    Base.metadata.create_all(bind=engine)
+    init_db()  # apply Alembic migrations (exercises the real schema path)
     from app.scripts.seed import run as seed_run
 
     seed_run()

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from typing import Iterator
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
@@ -49,33 +50,27 @@ def session_scope() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    from app import models  # noqa: F401  ensure models registered
+    """Bring the database schema up to date using Alembic migrations.
 
-    Base.metadata.create_all(bind=engine)
-    _light_migrations(engine)
+    Replaces the old `create_all` + ad-hoc SQLite column migrations. Legacy dev
+    databases created before Alembic are adopted by stamping them at head (their
+    existing tables are kept and future migrations apply cleanly on top).
+    """
+    from alembic import command
+    from alembic.config import Config
+    from pathlib import Path
 
+    import app.models  # noqa: F401  ensure models are registered on Base.metadata
 
-_SQLITE_ADD_COLUMNS = {
-    "series": [
-        ("generation_mode", "VARCHAR(20) DEFAULT ''"),
-        ("duration_minutes", "INTEGER DEFAULT 26"),
-        ("fact_check_enabled", "BOOLEAN DEFAULT 1"),
-    ],
-    "users": [
-        ("password_changed_at", "DATETIME"),
-    ],
-}
+    # This file lives at backend/app/core/db.py; the Alembic project root is backend/.
+    here = str(Path(__file__).resolve().parents[2])
+    cfg = Config(os.path.join(here, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(here, "alembic"))
 
-
-def _light_migrations(engine_) -> None:
-    """Additive, idempotent column migrations for SQLite dev databases."""
-    if not str(engine_.url).startswith("sqlite"):
-        return
-    with engine_.begin() as conn:
-        for table, columns in _SQLITE_ADD_COLUMNS.items():
-            if not inspect(conn).has_table(table):
-                continue
-            existing = {c["name"] for c in inspect(conn).get_columns(table)}
-            for name, ddl in columns:
-                if name not in existing:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    if tables and "alembic_version" not in tables:
+        # Pre-Alembic database: adopt the existing schema without re-creating it.
+        command.stamp(cfg, "head")
+    else:
+        command.upgrade(cfg, "head")
