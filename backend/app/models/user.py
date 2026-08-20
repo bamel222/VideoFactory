@@ -23,6 +23,8 @@ class User(Base, TimestampMixin):
     discord_webhook_url_encrypted: Mapped[str] = mapped_column(String(2000), default="")
     telegram_bot_token_encrypted: Mapped[str] = mapped_column(String(1000), default="")
     telegram_chat_id_encrypted: Mapped[str] = mapped_column(String(255), default="")
+    # Optional secondary address for notifications (in addition to `email`).
+    notification_email: Mapped[str] = mapped_column(String(255), default="")
 
 
 class PasswordHistory(Base, TimestampMixin):

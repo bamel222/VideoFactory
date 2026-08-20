@@ -32,7 +32,7 @@ const MinutesIcon = (
 export default function SettingsPage() {
   const [billing, setBilling] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({ discord_webhook_url: "", telegram_bot_token: "", telegram_chat_id: "" });
+  const [form, setForm] = useState({ notification_email: "", discord_webhook_url: "", telegram_bot_token: "", telegram_chat_id: "" });
   const [saving, setSaving] = useState(false);
   const { toast, toastError } = useToast();
 
@@ -40,7 +40,9 @@ export default function SettingsPage() {
     (async () => {
       try {
         setBilling(await api("/settings/billing"));
-        setProfile(await api("/notifications/profile"));
+        const p = await api("/notifications/profile");
+        setProfile(p);
+        setForm({ notification_email: p.notification_email || "", discord_webhook_url: "", telegram_bot_token: "", telegram_chat_id: "" });
       } catch (e) {
         toastError(e.message);
       }
@@ -76,13 +78,16 @@ export default function SettingsPage() {
       )}
 
       <div className="card mt" style={{ marginTop: 20 }}>
-        <h2>Notifications (Discord & Telegram)</h2>
+        <h2>Notifications (email, Discord & Telegram)</h2>
         <p className="muted" style={{ fontSize: 13 }}>
           Renseignez une fois vos canaux ; vous les activerez/désactiverez au moment de lancer une génération.
           Les identifiants sont chiffrés et jamais ré-affichés.
         </p>
         {profile && (
           <div className="row" style={{ gap: 10, marginBottom: 12 }}>
+            <span className={`badge ${profile.notification_email ? "green" : "gray"}`}>
+              Email secondaire {profile.notification_email ? "configuré" : "non configuré"}
+            </span>
             <span className={`badge ${profile.discord_configured ? "green" : "gray"}`}>
               Discord {profile.discord_configured ? "configuré" : "non configuré"}
             </span>
@@ -93,6 +98,9 @@ export default function SettingsPage() {
         )}
         <form onSubmit={save}>
           <div className="grid" style={{ gridTemplateColumns: "1fr", gap: 12 }}>
+            <Field label="Email de notification (secondaire)" hint="Facultatif : en plus de l'email du compte, recevez les notifications sur cette adresse. Laissez vide pour désactiver.">
+              <input value={form.notification_email} onChange={(e) => setForm({ ...form, notification_email: e.target.value })} placeholder="vous@exemple.com" type="email" />
+            </Field>
             <Field label="Webhook Discord" hint="URL du webhook de votre canal Discord (Paramètres du canal → Intégrations → Webhooks)">
               <input value={form.discord_webhook_url} onChange={(e) => setForm({ ...form, discord_webhook_url: e.target.value })} placeholder="https://discord.com/api/webhooks/..." />
             </Field>

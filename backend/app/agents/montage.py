@@ -14,7 +14,7 @@ settings = get_settings()
 MEDIA_ROOT = os.path.join(settings.data_dir, "media")
 STORAGE_ROOT = os.path.join(settings.data_dir, "storage")
 
-SIZE = "1280x720"
+SIZE = "1920x1080"
 FPS = 24
 MEDIA_TASK_TYPES = ("image_generate", "video_generate", "stock_video")
 NARRATION_TASK_TYPES = ("tts_voice",)

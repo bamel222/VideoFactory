@@ -103,7 +103,9 @@ de série** listant le statut (réussi/échoué) de chaque épisode.
   de lancer le pipeline).
 - Les identifiants Discord (webhook URL) et Telegram (bot token + chat id) se
   configurent dans **Paramètres** (chiffrés en base, jamais ré-affichés).
-- L'email de destination est celui du compte (`user.email`).
+- L'email de destination est celui du compte (`user.email`), plus une **adresse
+  secondaire optionnelle** (`notification_email`) configurable dans Paramètres.
+- La notification d'épisode liste aussi les **shorts** produits (plateformes).
 
 ### Configuration email (variables d'environnement)
 
@@ -134,6 +136,19 @@ gratuits et illimités.
 
 Dans **Paramètres → Notifications**, collez le **bot token** et le **chat id**.
 Ils sont chiffrés en base et jamais ré-affichés.
+
+## Résolution & nettoyage du stockage
+
+- **Résolution** : les vidéos finales sont produites en **Full HD 1080p**
+  (`1920×1080`), définie de façon centralisée dans `SIZE`
+  (`app/agents/montage.py`). Les clips stock sont recadrés à la même résolution.
+- **Nettoyage automatique** : une fois une série générée avec succès, les
+  fichiers **intermédiaires** (images, clips vidéo, audio, montage brut, sous-
+  titres par segment) sont supprimés. Sont conservés : la **vidéo finale**, les
+  **shorts**, le **SEO** et les **lignes de checkpoint** (métadonnées, ~1 Ko par
+  ligne — négligeables, et nécessaires à la reprise/idempotence). Le nettoyage ne
+  se déclenche qu'en cas de succès complet, pour conserver les intermédiaires
+  d'un épisode en échec en vue d'une reprise.
 
 ## Documentation
 

@@ -106,6 +106,17 @@ def run_pipeline(db: Session, series_id: int, dry_run: bool = False, requester: 
             notify_pipeline_outcome(db, requester, series, tasks)
         except Exception:  # noqa: BLE001
             pass
+
+    # Once fully successful, delete intermediate media files (keep final video
+    # + shorts + SEO + checkpoint rows). Never raises; only on full success so
+    # failed intermediates remain available for a retry.
+    if requester is not None and not dry_run and run.status == "done":
+        try:
+            from app.orchestrator.cleanup import cleanup_series_intermediates
+
+            cleanup_series_intermediates(db, series_id)
+        except Exception:  # noqa: BLE001
+            pass
     return run
 
 

@@ -52,10 +52,23 @@ def _episode_download_url(db: Session, episode) -> str | None:
         return None
 
 
+def _recipient_emails(user) -> list[str]:
+    """Account email + optional secondary notification email, deduplicated."""
+    if not user:
+        return []
+    seen = []
+    for addr in (user.email, getattr(user, "notification_email", "") or ""):
+        addr = (addr or "").strip().lower()
+        if addr and addr not in seen:
+            seen.append(addr)
+    return seen
+
+
 def _send_all(db: Session, user, series, subject: str, body: str) -> None:
     """Dispatch a message to every channel enabled on the series (0..3 channels)."""
-    if series.notify_email and user and user.email:
-        _safe(send_email, user.email, subject, body)
+    if series.notify_email:
+        for addr in _recipient_emails(user):
+            _safe(send_email, addr, subject, body)
 
     if series.notify_discord:
         webhook = decrypt_secret(user.discord_webhook_url_encrypted) if user else ""
@@ -69,6 +82,21 @@ def _send_all(db: Session, user, series, subject: str, body: str) -> None:
             _safe(send_telegram, token, chat_id, body)
 
 
+def _episode_shorts_platforms(db: Session, episode) -> list[str]:
+    """Platforms for which a short was produced for this episode (empty if none)."""
+    try:
+        from app.models import ShortsPackage
+
+        return sorted({
+            s.platform for s in db.scalars(
+                select(ShortsPackage).where(ShortsPackage.episode_id == episode.id)
+            ).all()
+            if s.platform
+        })
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def notify_episode(db: Session, user, series, episode, ok: bool) -> None:
     subject = f"Épisode {episode.number} {'prêt' if ok else 'en échec'} — {series.title}"
     lines = [
@@ -80,6 +108,9 @@ def notify_episode(db: Session, user, series, episode, ok: bool) -> None:
         dl = _episode_download_url(db, episode)
         if dl:
             lines.append(f"Télécharger : {dl}")
+        platforms = _episode_shorts_platforms(db, episode)
+        if platforms:
+            lines.append(f"Shorts prêts : {', '.join(platforms)}")
     url = _app_series_url(series)
     if url:
         lines.append(f"Voir : {url}")

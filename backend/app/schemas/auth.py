@@ -60,6 +60,7 @@ class NotificationProfile(BaseModel):
     """Self-service notification credentials. Set a field to update it; an
     empty string clears it."""
 
+    notification_email: str | None = None
     discord_webhook_url: str | None = None
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None

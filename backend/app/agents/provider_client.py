@@ -467,7 +467,7 @@ class StockVideoClient:
                 raise RuntimeError("Trop de redirections pendant le téléchargement")
             run_ffmpeg(
                 ["-y", "-i", tmp, "-t", f"{duration}", "-vf",
-                 "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1",
+                 "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1",
                  "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p", path],
                 timeout=300,
             )

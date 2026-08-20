@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -14,6 +14,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 def _profile(user: User) -> dict:
     return {
         "email": user.email,
+        "notification_email": user.notification_email or "",
         "discord_configured": bool(decrypt_secret(user.discord_webhook_url_encrypted)),
         "telegram_configured": bool(
             decrypt_secret(user.telegram_bot_token_encrypted)
@@ -33,6 +34,11 @@ def update_profile(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    if body.notification_email is not None:
+        value = body.notification_email.strip()
+        if value and "@" not in value:
+            raise HTTPException(400, "Adresse email de notification invalide")
+        user.notification_email = value.lower() if value else ""
     if body.discord_webhook_url is not None:
         user.discord_webhook_url_encrypted = (
             encrypt_secret(body.discord_webhook_url) if body.discord_webhook_url else ""
