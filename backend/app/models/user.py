@@ -40,7 +40,7 @@ class Workspace(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
+    owner_id: Mapped[int] = mapped_column(Integer, nullable=True)
 
     users: Mapped[list["User"]] = relationship(  # noqa: F821
         backref="workspace", foreign_keys="User.workspace_id"

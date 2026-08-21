@@ -24,7 +24,7 @@ class Series(Base, TimestampMixin):
     generation_mode: Mapped[str] = mapped_column(String(20), default="")
     duration_minutes: Mapped[int] = mapped_column(Integer, default=26)
     fact_check_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    continuity_pack_id: Mapped[int] = mapped_column(ForeignKey("continuity_packs.id"), nullable=True)
+    continuity_pack_id: Mapped[int] = mapped_column(Integer, nullable=True)
     business_score: Mapped[float] = mapped_column(default=0.0, nullable=False)
     production_cost: Mapped[float] = mapped_column(default=0.0, nullable=False)
     # Notification channels chosen at launch time (never block generation).

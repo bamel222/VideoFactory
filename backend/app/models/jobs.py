@@ -36,7 +36,7 @@ class JobTask(Base, TimestampMixin):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     cost: Mapped[float] = mapped_column(Float, default=0.0)
     provider_id: Mapped[int] = mapped_column(ForeignKey("providers.id"), nullable=True)
-    checkpoint_id: Mapped[int] = mapped_column(ForeignKey("checkpoints.id"), nullable=True)
+    checkpoint_id: Mapped[int] = mapped_column(Integer, nullable=True)
     depends_on: Mapped[list] = mapped_column(JSON, default=list)  # task ids
     sequence: Mapped[int] = mapped_column(Integer, default=0)
 
