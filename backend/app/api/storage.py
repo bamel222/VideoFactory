@@ -68,26 +68,6 @@ def create_storage(body: StorageCreate, request: Request, db: Session = Depends(
     return {"id": s.id, "name": s.name, "kind": s.kind}
 
 
-@router.get("/{storage_id}")
-def get_storage(storage_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Return a single backend with its decrypted config (Owner/Admin only)."""
-    if not require_permission(user.role, "storage.manage"):
-        raise HTTPException(403, "Owner or Admin only")
-    s = _reg(db, user).get(storage_id)
-    try:
-        config = json.loads(decrypt_secret(s.config_encrypted) or "{}")
-    except Exception:
-        config = {}
-    return {
-        "id": s.id, "name": s.name, "kind": s.kind, "priority": s.priority,
-        "quota_bytes": s.quota_bytes, "used_bytes": s.used_bytes,
-        "cost_per_gb": s.cost_per_gb, "status": s.status, "region": s.region,
-        "replication": s.replication, "healthy": s.healthy,
-        "last_healthcheck_at": s.last_healthcheck_at,
-        "config": config,
-    }
-
-
 @router.patch("/{storage_id}")
 def update_storage(storage_id: int, body: StorageUpdate, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not require_permission(user.role, "storage.manage"):
@@ -149,3 +129,25 @@ def signed_url(asset_id: int, db: Session = Depends(get_db), user: User = Depend
     if not asset or asset.workspace_id != user.workspace_id:
         raise HTTPException(404, "Asset not found")
     return {"url": _reg(db, user).signed_url_for(asset), "expires_in": 3600}
+
+
+# NOTE: declared AFTER the /assets routes so that GET /storage/assets is not
+# swallowed by the {storage_id} path parameter (which would 422 on "assets").
+@router.get("/{storage_id}")
+def get_storage(storage_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Return a single backend with its decrypted config (Owner/Admin only)."""
+    if not require_permission(user.role, "storage.manage"):
+        raise HTTPException(403, "Owner or Admin only")
+    s = _reg(db, user).get(storage_id)
+    try:
+        config = json.loads(decrypt_secret(s.config_encrypted) or "{}")
+    except Exception:
+        config = {}
+    return {
+        "id": s.id, "name": s.name, "kind": s.kind, "priority": s.priority,
+        "quota_bytes": s.quota_bytes, "used_bytes": s.used_bytes,
+        "cost_per_gb": s.cost_per_gb, "status": s.status, "region": s.region,
+        "replication": s.replication, "healthy": s.healthy,
+        "last_healthcheck_at": s.last_healthcheck_at,
+        "config": config,
+    }
