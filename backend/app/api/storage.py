@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -7,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.core.audit import audit_log
 from app.core.config import get_settings
+from app.core.encryption import decrypt_secret
 from app.core.filevalidation import deep_validate_media, sanitize_filename, validate_file_upload
 from app.core.security import require_permission
 from app.models import Asset, User
@@ -63,6 +66,26 @@ def create_storage(body: StorageCreate, request: Request, db: Session = Depends(
     s = _reg(db, user).create(body)
     audit_log(db, user.id, "storage.create", "storage_backend", s.id, {"name": s.name, "kind": s.kind}, request.client.host if request.client else None)
     return {"id": s.id, "name": s.name, "kind": s.kind}
+
+
+@router.get("/{storage_id}")
+def get_storage(storage_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Return a single backend with its decrypted config (Owner/Admin only)."""
+    if not require_permission(user.role, "storage.manage"):
+        raise HTTPException(403, "Owner or Admin only")
+    s = _reg(db, user).get(storage_id)
+    try:
+        config = json.loads(decrypt_secret(s.config_encrypted) or "{}")
+    except Exception:
+        config = {}
+    return {
+        "id": s.id, "name": s.name, "kind": s.kind, "priority": s.priority,
+        "quota_bytes": s.quota_bytes, "used_bytes": s.used_bytes,
+        "cost_per_gb": s.cost_per_gb, "status": s.status, "region": s.region,
+        "replication": s.replication, "healthy": s.healthy,
+        "last_healthcheck_at": s.last_healthcheck_at,
+        "config": config,
+    }
 
 
 @router.patch("/{storage_id}")

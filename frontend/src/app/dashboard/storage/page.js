@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { PageHeader, SkeletonRows, Field, useToast } from "@/components/ui";
+import { PageHeader, SkeletonRows, Field, Modal, useToast } from "@/components/ui";
 
 const KINDS = ["local", "pcloud", "supabase", "s3", "r2", "b2", "minio", "nas"];
 const EMPTY_FORM = { name: "", kind: "local", config: '{"root":"./data/storage"}', priority: 100, status: "active", region: "" };
@@ -11,7 +11,10 @@ export default function StoragePage() {
   const [backends, setBackends] = useState(null);
   const [assets, setAssets] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editing, setEditing] = useState(null); // backend being edited, or null
+  const [editForm, setEditForm] = useState(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
   const { toast, toastError } = useToast();
 
   const load = async () => {
@@ -28,23 +31,76 @@ export default function StoragePage() {
   async function create(e) {
     e.preventDefault();
     setError("");
+    setBusy("create");
     try {
       let config = {};
-      try { config = JSON.parse(form.config); } catch { setError("config JSON invalide"); return; }
+      try { config = JSON.parse(form.config); } catch { setError("Config JSON invalide — vérifiez les guillemets et les virgules."); return; }
       await api("/storage", { method: "POST", body: JSON.stringify({ ...form, config, quota_bytes: 0, cost_per_gb: 0, replication: "" }) });
       setForm(EMPTY_FORM);
       toast("Backend de stockage créé");
       await load();
-    } catch (err) { setError(err.message); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function openEdit(b) {
+    setError("");
+    setBusy(`edit-${b.id}`);
+    try {
+      const full = await api(`/storage/${b.id}`);
+      setEditing(b);
+      setEditForm({
+        name: full.name,
+        kind: full.kind,
+        config: JSON.stringify(full.config || {}, null, 2),
+        priority: full.priority,
+        region: full.region || "",
+        status: full.status,
+      });
+    } catch (err) {
+      setError(`Impossible de charger la config : ${err.message}`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    setError("");
+    setBusy("edit");
+    try {
+      let config = {};
+      try { config = JSON.parse(editForm.config); } catch { setError("Config JSON invalide."); return; }
+      await api(`/storage/${editing.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ...editForm, config }),
+      });
+      setEditing(null);
+      toast("Backend mis à jour");
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy("");
+    }
   }
 
   async function healthcheck(b) {
     setError("");
+    setBusy(`hc-${b.id}`);
     try {
       const r = await api(`/storage/${b.id}/healthcheck`, { method: "POST" });
-      toast(`Healthcheck ${b.name} : ${r.healthy ? "OK" : "KO"}`);
+      if (r.healthy) toast(`Healthcheck ${b.name} : OK`);
+      else setError(`Healthcheck ${b.name} : KO — vérifiez l'endpoint, la région, les clés et que boto3 est installé.`);
       await load();
-    } catch (err) { setError(err.message); }
+    } catch (err) {
+      setError(`Healthcheck échoué : ${err.message}`);
+    } finally {
+      setBusy("");
+    }
   }
 
   async function toggle(b) {
@@ -91,14 +147,13 @@ export default function StoragePage() {
       <div className="card mb">
         <h2>Nouveau backend de stockage</h2>
         <form onSubmit={create}>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 140px 1fr 100px 120px 110px auto", alignItems: "end" }}>
+          <div className="grid" style={{ gridTemplateColumns: "1fr 140px 100px 120px auto", alignItems: "end" }}>
             <Field label="Nom"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
             <Field label="Type">
               <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
                 {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
             </Field>
-            <Field label="Config JSON"><input value={form.config} onChange={(e) => setForm({ ...form, config: e.target.value })} /></Field>
             <Field label="Priorité"><input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} /></Field>
             <Field label="Région"><input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} /></Field>
             <Field label="Statut">
@@ -106,8 +161,11 @@ export default function StoragePage() {
                 <option value="active">active</option><option value="disabled">disabled</option>
               </select>
             </Field>
-            <button type="submit">Créer</button>
+            <button type="submit" disabled={busy === "create"}>{busy === "create" ? "..." : "Créer"}</button>
           </div>
+          <Field label="Config (JSON)" hint={'Ex. S3/OVH : {"endpoint_url":"https://s3.eu-west-par.io.cloud.ovh.net","bucket":"…","access_key":"…","secret_key":"…","region":"eu-west-par"}'}>
+            <textarea rows="5" value={form.config} onChange={(e) => setForm({ ...form, config: e.target.value })} style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }} />
+          </Field>
         </form>
       </div>
 
@@ -137,8 +195,15 @@ export default function StoragePage() {
                   <td>{b.replication || "—"}</td>
                   <td>
                     <div className="row">
-                      <button className="small secondary" onClick={() => healthcheck(b)}>Health</button>
-                      <button className={`small ${b.status === "active" ? "warn" : "ok"}`} onClick={() => toggle(b)}>{b.status === "active" ? "Désactiver" : "Activer"}</button>
+                      <button className="small secondary" disabled={busy === `hc-${b.id}`} onClick={() => healthcheck(b)}>
+                        {busy === `hc-${b.id}` ? "..." : "Healthcheck"}
+                      </button>
+                      <button className="small secondary" disabled={busy === `edit-${b.id}`} onClick={() => openEdit(b)}>
+                        {busy === `edit-${b.id}` ? "..." : "Modifier"}
+                      </button>
+                      <button className={`small ${b.status === "active" ? "warn" : "ok"}`} onClick={() => toggle(b)}>
+                        {b.status === "active" ? "Désactiver" : "Activer"}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -174,6 +239,39 @@ export default function StoragePage() {
           </div>
         )}
       </div>
+
+      {editing && editForm && (
+        <Modal title={`Modifier « ${editing.name} »`} onClose={() => setEditing(null)}>
+          <form onSubmit={saveEdit}>
+            <Field label="Nom">
+              <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
+            </Field>
+            <Field label="Type">
+              <select value={editForm.kind} onChange={(e) => setEditForm({ ...editForm, kind: e.target.value })}>
+                {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </Field>
+            <Field label="Priorité">
+              <input type="number" value={editForm.priority} onChange={(e) => setEditForm({ ...editForm, priority: Number(e.target.value) })} />
+            </Field>
+            <Field label="Région">
+              <input value={editForm.region} onChange={(e) => setEditForm({ ...editForm, region: e.target.value })} />
+            </Field>
+            <Field label="Statut">
+              <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                <option value="active">active</option><option value="disabled">disabled</option>
+              </select>
+            </Field>
+            <Field label="Config (JSON)">
+              <textarea rows="6" value={editForm.config} onChange={(e) => setEditForm({ ...editForm, config: e.target.value })} style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }} />
+            </Field>
+            <div className="row" style={{ justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+              <button type="button" className="secondary" onClick={() => setEditing(null)}>Annuler</button>
+              <button type="submit" disabled={busy === "edit"}>{busy === "edit" ? "..." : "Enregistrer"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

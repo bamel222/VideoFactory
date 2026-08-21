@@ -298,6 +298,9 @@ class StorageRegistry:
     def create(self, data) -> StorageBackend:
         if data.kind not in ("local", "pcloud", "supabase", "s3", "r2", "b2", "minio", "nas"):
             raise HTTPException(400, f"Invalid storage kind: {data.kind}")
+        # Validate the endpoint/config up front (SSRF guard) so a bad config
+        # fails at creation time with a clear error instead of a silent "ko".
+        _validate_storage_config(data.kind, data.config or {})
         s = StorageBackend(
             workspace_id=self.workspace_id,
             name=data.name,
