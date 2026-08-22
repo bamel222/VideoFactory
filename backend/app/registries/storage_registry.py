@@ -420,6 +420,17 @@ class StorageRegistry:
 
     def delete(self, storage_id: int) -> None:
         s = self.get(storage_id)
+        # Remove the backend's assets first (they hold a FK to it), attempting to
+        # delete the underlying objects too; then drop the backend row.
+        from app.models import Asset
+
+        assets = list(self.db.scalars(select(Asset).where(Asset.storage_id == storage_id)))
+        for asset in assets:
+            try:
+                build_adapter(s).delete(asset.path)
+            except Exception:  # noqa: BLE001
+                pass  # object may already be gone; the row is still removed
+            self.db.delete(asset)
         self.db.delete(s)
         self.db.commit()
 

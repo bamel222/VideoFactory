@@ -114,6 +114,21 @@ export default function StoragePage() {
     } catch (err) { setError(err.message); }
   }
 
+  async function remove(b) {
+    setError("");
+    if (!window.confirm(`Supprimer définitivement le backend « ${b.name} » et ses assets ?`)) return;
+    setBusy(`del-${b.id}`);
+    try {
+      await api(`/storage/${b.id}`, { method: "DELETE" });
+      toast(`Backend « ${b.name} » supprimé`);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function upload(files) {
     setError("");
     const file = files[0];
@@ -208,6 +223,9 @@ export default function StoragePage() {
                       </button>
                       <button className={`small ${b.status === "active" ? "warn" : "ok"}`} onClick={() => toggle(b)}>
                         {b.status === "active" ? "Désactiver" : "Activer"}
+                      </button>
+                      <button className="small danger" disabled={busy === `del-${b.id}`} onClick={() => remove(b)}>
+                        {busy === `del-${b.id}` ? "..." : "Supprimer"}
                       </button>
                     </div>
                   </td>
