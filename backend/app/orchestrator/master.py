@@ -117,6 +117,14 @@ def run_pipeline(db: Session, series_id: int, dry_run: bool = False, requester: 
             cleanup_series_intermediates(db, series_id)
         except Exception:  # noqa: BLE001
             pass
+
+        # Export a per-episode seo.json next to the final video in the bucket.
+        try:
+            from app.orchestrator.seo_export import export_series_seo
+
+            export_series_seo(db, series)
+        except Exception:  # noqa: BLE001
+            pass
     return run
 
 
