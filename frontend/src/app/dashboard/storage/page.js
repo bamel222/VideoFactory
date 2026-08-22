@@ -93,8 +93,11 @@ export default function StoragePage() {
     setBusy(`hc-${b.id}`);
     try {
       const r = await api(`/storage/${b.id}/healthcheck`, { method: "POST" });
-      if (r.healthy) toast(`Healthcheck ${b.name} : OK`);
-      else setError(`Healthcheck ${b.name} : KO — vérifiez l'endpoint, la région, les clés et que boto3 est installé.`);
+      if (r.healthy) {
+        toast(`Healthcheck ${b.name} : OK`);
+      } else {
+        setError(`Healthcheck ${b.name} : KO — ${r.error || "raison inconnue"}`);
+      }
       await load();
     } catch (err) {
       setError(`Healthcheck échoué : ${err.message}`);

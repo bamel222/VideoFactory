@@ -95,18 +95,22 @@ class LocalStorageAdapter(StorageAdapter):
 
 
 class S3CompatibleAdapter(StorageAdapter):
-    """S3, R2, B2, MinIO via boto3 with a configurable endpoint."""
+    """S3, R2, B2, MinIO, OVHCloud via boto3 with a configurable endpoint."""
 
     def __init__(self, config: dict):
         import boto3
+        from botocore.config import Config as BotoConfig
 
         self.bucket = config.get("bucket", "video-factory")
+        # Path-style addressing: required by single-endpoint S3 providers
+        # (OVHcloud, MinIO, …) where the endpoint is not bucket-specific.
         self.client = boto3.client(
             "s3",
             endpoint_url=config.get("endpoint_url"),
             region_name=config.get("region", "us-east-1"),
             aws_access_key_id=config.get("access_key"),
             aws_secret_access_key=config.get("secret_key"),
+            config=BotoConfig(s3={"addressing_style": "path"}),
         )
 
     def upload_stream(self, path: str, src, content_type: str = "") -> str:
@@ -127,11 +131,9 @@ class S3CompatibleAdapter(StorageAdapter):
         self.client.delete_object(Bucket=self.bucket, Key=path)
 
     def healthcheck(self) -> bool:
-        try:
-            self.client.head_bucket(Bucket=self.bucket)
-            return True
-        except Exception:
-            return False
+        # Raises on failure (registry captures the message); returns True on success.
+        self.client.head_bucket(Bucket=self.bucket)
+        return True
 
 
 class SupabaseStorageAdapter(StorageAdapter):
@@ -337,14 +339,16 @@ class StorageRegistry:
 
     def healthcheck(self, storage_id: int) -> dict:
         s = self.get(storage_id)
+        error: str | None = None
         try:
             ok = build_adapter(s).healthcheck()
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
             ok = False
+            error = str(exc)[:400]
         s.healthy = ok
         s.last_healthcheck_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         self.db.commit()
-        return {"id": s.id, "name": s.name, "healthy": ok}
+        return {"id": s.id, "name": s.name, "healthy": ok, "error": error}
 
     def select_active(self) -> list[StorageBackend]:
         actives = [s for s in self.list() if s.status == "active"]
