@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Factory — Référence complète des commandes serveur</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --panel:#121215; --panel2:#18181c;
+    --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+    --text:#f2f0ea; --muted:#9a968d; --faint:#6b685f;
+    --gold:#d4a24c; --gold2:#e6c88a; --ok:#4ade80; --warn:#eab308; --danger:#f87171;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .page{max-width:900px;margin:0 auto;padding:48px 32px 96px}
+  header{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:15px;margin-bottom:20px}
+  .logo{width:32px;height:32px;border:1px solid var(--gold);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border-radius:2px}
+  .kicker{font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.18em;font-weight:600;margin-bottom:8px}
+  h1{font-family:var(--serif);font-weight:400;font-size:34px;margin:0 0 8px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);max-width:640px}
+  h2{font-family:var(--serif);font-weight:400;font-size:23px;margin:44px 0 6px;padding-top:26px;border-top:1px solid var(--border);letter-spacing:-.01em}
+  h2 .n{color:var(--gold);font-size:14px;vertical-align:top;margin-right:8px;font-family:ui-sans-serif,sans-serif;letter-spacing:.1em}
+  h3{font-size:15px;font-weight:600;margin:24px 0 6px;color:var(--gold2)}
+  p{margin:8px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:6px 0}
+  li::marker{color:var(--gold)}
+  .cmd{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin:10px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.8;overflow-x:auto}
+  .cmd .c{color:var(--gold2)}
+  .cmd .cm{color:var(--faint)}
+  .cmd .p{color:#7dd3fc}
+  code{background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:13px;color:var(--gold2);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .note{border-left:2px solid var(--gold);background:rgba(212,162,76,.06);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-size:14px}
+  .note b{color:var(--gold2)}
+  .warn{border-left:2px solid var(--warn);background:rgba(234,179,8,.06);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-size:14px}
+  .warn b{color:var(--warn)}
+  .danger{border-left:2px solid var(--danger);background:rgba(248,113,113,.06);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-size:14px}
+  .danger b{color:var(--danger)}
+  .magic{border:1px solid rgba(212,162,76,.5);border-radius:6px;padding:16px 18px;margin:16px 0;background:linear-gradient(135deg,rgba(212,162,76,.10),rgba(230,200,138,.04))}
+  .magic .t{font-weight:700;color:var(--gold2);font-size:13px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;border:1px solid var(--border)}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
+  td{padding:9px 14px;border-top:1px solid var(--border);font-size:14px;vertical-align:top}
+  footer{margin-top:56px;border-top:1px solid var(--border);padding-top:20px;color:var(--faint);font-size:13px}
+  @media print{
+    body{background:#fff;color:#111;font-size:12px}
+    .page{max-width:100%;padding:20px}
+    .cmd,.note,.warn,.danger,.magic{background:#f7f7f7;border-color:#ddd}
+    :root{--bg:#fff;--panel:#f5f5f5;--border:#ddd;--text:#111;--muted:#555;--gold:#8a6a1f;--gold2:#a8822e}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brand"><div class="logo">VF</div><span>Video Factory</span></div>
+    <div class="kicker">Référence serveur — édition complète</div>
+    <h1>Commandes OVHCloud</h1>
+    <p>L'ensemble des commandes utilisées pour déployer et exploiter l'application sur l'instance Public Cloud, dans l'ordre logique, avec explications.</p>
+  </header>
+
+  <div class="note"><b>Contexte :</b> l'application tourne avec Docker Compose (6 conteneurs : <code>redis</code>, <code>postgres</code>, <code>backend</code>, <code>worker</code>, <code>frontend</code>, <code>nginx</code>). Le code vit dans <code>~/VideoFactory</code>. La clé SSH privée est sur votre PC dans <code>C:/Users/ToshR/Downloads/ovh_cle_ssh_privee.pem</code>.</div>
+
+  <h2><span class="n">01</span>Connexion au serveur (SSH)</h2>
+  <div class="cmd"><span class="cm"># Depuis votre PC (PowerShell ou Git Bash sur Windows)</span>
+<span class="c">ssh -i C:/Users/ToshR/Downloads/ovh_cle_ssh_privee.pem ubuntu@57.130.39.132</span></div>
+  <p>Le <code>-i</code> pointe vers votre clé privée SSH (fichier <code>.pem</code>), puis <code>ubuntu@</code> suivi de l'IP publique de l'instance.</p>
+  <div class="note"><b>Astuce :</b> pour éviter de retaper le chemin de la clé à chaque fois, créez un alias (dans PowerShell, éditez <code>$PROFILE</code>) ou placez la clé dans <code>~/.ssh/</code>.</div>
+
+  <h2><span class="n">02</span>⭐ LA commande de mise à jour (à retenir absolument)</h2>
+  <p>À lancer à chaque fois que du nouveau code est poussé sur GitHub. Elle récupère le code, reconstruit les images, puis recrée nginx (pour qu'il recharge sa config — c'est ce qui évite les « 502 »).</p>
+  <div class="magic">
+    <div class="t">Commande magique — mise à jour complète</div>
+    <div class="cmd" style="margin:0;background:transparent;border:0;padding:0">
+<span class="c">cd ~/VideoFactory</span>
+<span class="c">git pull</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml --env-file infra/.env up -d --build</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml up -d --force-recreate nginx</span>
+    </div>
+  </div>
+  <div class="warn"><b>Important :</b> attendre la fin complète du <code>--build</code> (retour au prompt) avant de tester. Pendant le build, le site peut renvoyer un <code>502</code> — c'est normal et temporaire.</div>
+  <p><b>Détail de chaque ligne :</b></p>
+  <ul>
+    <li><code>git pull</code> — télécharge les derniers changements depuis GitHub.</li>
+    <li><code>up -d --build</code> — reconstruit les images Docker et redémarre les conteneurs modifiés.</li>
+    <li><code>--force-recreate nginx</code> — recrée nginx pour qu'il charge la config à jour (sinon il garde l'ancienne adresse des services → 502).</li>
+  </ul>
+
+  <h2><span class="n">03</span>Installer Docker (une seule fois, à la création de l'instance)</h2>
+  <div class="cmd"><span class="c">sudo apt-get update</span>
+<span class="c">sudo apt-get install -y docker.io docker-compose-plugin</span>
+<span class="c">sudo usermod -aG docker $USER</span>
+<span class="cm"># se déconnecter puis se reconnecter pour activer le groupe docker</span>
+<span class="c">exit</span></div>
+
+  <h2><span class="n">04</span>Récupérer le code (une seule fois)</h2>
+  <div class="cmd"><span class="c">git clone https://github.com/bamel222/VideoFactory.git</span>
+<span class="c">cd VideoFactory</span></div>
+  <div class="note"><b>Le repo est privé :</b> la première fois, git vous demande un identifiant. Utilisez votre nom d'utilisateur GitHub + un <b>token d'accès</b> (pas votre mot de passe).</div>
+
+  <h2><span class="n">05</span>Configuration secrète (une seule fois)</h2>
+  <div class="cmd"><span class="c">cd ~/VideoFactory/infra</span>
+<span class="c">cp .env.production.example .env</span>
+<span class="c">nano .env</span></div>
+  <p>Générer les deux secrets obligatoires (à coller dans le <code>.env</code>) :</p>
+  <div class="cmd"><span class="c">openssl rand -base64 32</span>   <span class="cm"># → ENCRYPTION_KEY</span>
+<span class="c">openssl rand -base64 32</span>   <span class="cm"># → JWT_SECRET</span></div>
+
+  <h2><span class="n">06</span>Vérifier l'état des services</h2>
+  <div class="cmd"><span class="c">cd ~/VideoFactory</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml ps</span></div>
+  <p>Doit afficher 6 conteneurs en <code>Up</code> (et <code>healthy</code> pour postgres, redis, backend).</p>
+
+  <h2><span class="n">07</span>Consulter les logs</h2>
+  <div class="cmd"><span class="cm"># Logs du backend (démarrage, migrations, erreurs API)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml logs backend --tail 50</span>
+<span class="cm"># Suivre les logs en direct (Ctrl+C pour quitter)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml logs -f backend</span>
+<span class="cm"># Logs du worker (suivi de la génération vidéo)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml logs -f worker</span>
+<span class="cm"># Logs du frontend (erreurs de build Next.js)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml logs frontend --tail 50</span></div>
+  <p>Le <b>worker</b> exécute le pipeline vidéo : c'est lui qu'on suit pendant une génération.</p>
+
+  <h2><span class="n">08</span>Tester l'API (le test qui ne ment pas)</h2>
+  <div class="cmd"><span class="cm"># Le login doit renvoyer du JSON (avec "access_token"), jamais du HTML</span>
+<span class="c">curl -s -X POST http://localhost/api/v1/auth/login \</span>
+<span class="c">  -H "Content-Type: application/json" \</span>
+<span class="c">  -d '{"email":"owner@vf.ai","password":"password123"}'</span></div>
+  <p>Si ça renvoie <code>&lt;html&gt;...502...&lt;/html&gt;</code>, le backend n'est pas joignable → refaire la commande de mise à jour (section 02).</p>
+
+  <h2><span class="n">09</span>Créer les comptes (seed)</h2>
+  <p>À faire seulement si la base est vide (après un <code>down -v</code>). Crée owner/admin/reviewer + les providers factices.</p>
+  <div class="cmd"><span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.seed</span></div>
+  <p>Comptes : <code>owner@vf.ai</code>, <code>admin@vf.ai</code>, <code>reviewer@vf.ai</code> — mot de passe <code>password123</code> (à changer ensuite).</p>
+
+  <h2><span class="n">10</span>Migrations de base de données</h2>
+  <p>Normalement automatiques au démarrage du backend. En cas de besoin manuel :</p>
+  <div class="cmd"><span class="cm"># Appliquer les migrations</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend alembic upgrade head</span>
+<span class="cm"># Voir l'état actuel de la base</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend alembic current</span></div>
+
+  <h2><span class="n">11</span>Scripts d'administration disponibles</h2>
+  <p>En plus de <code>seed</code>, le backend fournit ces scripts :</p>
+  <div class="cmd"><span class="cm"># Nettoyage manuel des fichiers intermédiaires d'une série (remplacer 1 par l'ID)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.cleanup_series 1</span>
+<span class="cm"># Rotation des clés de chiffrement</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.rotate_keys</span>
+<span class="cm"># Générer le SBOM (inventaire des dépendances)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.sbom</span></div>
+  <p>Le nettoyage est aussi <b>automatique</b> en fin de génération réussie (garde la vidéo finale + le short, supprime le reste).</p>
+
+  <h2><span class="n">12</span>Redémarrer / arrêter</h2>
+  <div class="cmd"><span class="cm"># Redémarrer un seul service (ex. nginx après un souci)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml restart nginx</span>
+<span class="cm"># Tout arrêter (les données Postgres sont conservées)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml down</span>
+<span class="cm"># Tout arrêter ET SUPPRIMER la base (repartir de zéro)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml down -v</span>
+<span class="cm"># Démarrer sans reconstruire (plus rapide)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml --env-file infra/.env up -d</span></div>
+  <div class="danger"><b>Attention :</b> <code>down -v</code> efface la base Postgres (séries, comptes, etc.). Ne le faire que si on accepte de tout perdre, puis refaire le seed (section 09).</div>
+
+  <h2><span class="n">13</span>Entrer dans un conteneur (dépannage)</h2>
+  <div class="cmd"><span class="cm"># Ouvrir un shell dans le backend</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend /bin/bash</span>
+<span class="cm"># Inspecter la base de données directement (postgres)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec postgres psql -U vf -d videofactory</span></div>
+  <p>Remplacez <code>vf</code> et <code>videofactory</code> par les valeurs de votre <code>.env</code> (<code>POSTGRES_USER</code> / <code>POSTGRES_DB</code>).</p>
+
+  <h2><span class="n">14</span>Gérer le bucket OVH (AWS CLI)</h2>
+  <div class="cmd"><span class="cm"># Installer awscli (une fois)</span>
+<span class="c">sudo apt-get install -y awscli</span>
+<span class="cm"># Configurer les identifiants (puis répondre aux questions)</span>
+<span class="c">aws configure</span>
+<span class="cm"># Lister les objets d'un dossier du bucket</span>
+<span class="c">aws s3 ls s3://NOM_DU_BUCKET/series/ --recursive --endpoint-url https://s3.eu-west-par.io.cloud.ovh.net</span>
+<span class="cm"># Supprimer tout un dossier</span>
+<span class="c">aws s3 rm s3://NOM_DU_BUCKET/series/1/ --recursive --endpoint-url https://s3.eu-west-par.io.cloud.ovh.net</span></div>
+  <p>Ou simplement depuis l'interface OVH : bucket → sélectionner → supprimer.</p>
+
+  <h2><span class="n">15</span>Surveiller la machine (disque, mémoire)</h2>
+  <div class="cmd"><span class="cm"># Espace disque utilisé</span>
+<span class="c">df -h</span>
+<span class="cm"># Mémoire vive utilisée</span>
+<span class="c">free -h</span>
+<span class="cm"># Espace consommé par Docker (images, conteneurs, volumes)</span>
+<span class="c">docker system df</span>
+<span class="cm"># Nettoyer les images et caches Docker inutilisés (libère de l'espace)</span>
+<span class="c">docker system prune -a</span></div>
+  <div class="warn"><b>Attention :</b> <code>docker system prune -a</code> supprime les images non utilisées. Les conteneurs en cours ne sont pas touchés, mais il faudra reconstruire au prochain <code>up --build</code>.</div>
+
+  <h2><span class="n">16</span>Transférer des fichiers entre le PC et le serveur</h2>
+  <div class="cmd"><span class="cm"># Télécharger un fichier du serveur vers le PC (à lancer depuis le PC)</span>
+<span class="c">scp -i C:/Users/ToshR/Downloads/ovh_cle_ssh_privee.pem \</span>
+<span class="c">  ubuntu@57.130.39.132:/chemin/vers/fichier.mp4 C:/Users/ToshR/Downloads/</span></div>
+  <p>Utile pour récupérer des fichiers directement, sans passer par le bouton « Télécharger » de l'app.</p>
+
+  <h2><span class="n">17</span>Réparer git (si le remote est cassé)</h2>
+  <div class="cmd"><span class="cm"># Voir le remote actuel</span>
+<span class="c">cd ~/VideoFactory && git remote -v</span>
+<span class="cm"># Le corriger si l'URL est tronquée ou fausse</span>
+<span class="c">git remote set-url origin https://github.com/bamel222/VideoFactory.git</span>
+<span class="cm"># Si le pull bloque sur des modifications locales</span>
+<span class="c">git checkout -- &lt;fichier&gt;</span>
+<span class="c">git pull</span></div>
+
+  <h2><span class="n">18</span>Récapitulatif de l'architecture</h2>
+  <table>
+    <tr><th>Service</th><th>Rôle</th><th>Port interne</th></tr>
+    <tr><td><code>nginx</code></td><td>Point d'entrée (port 80 public), route vers frontend + API</td><td>80</td></tr>
+    <tr><td><code>frontend</code></td><td>Interface Next.js (React)</td><td>3000</td></tr>
+    <tr><td><code>backend</code></td><td>API FastAPI (auth, séries, stockage, notifications)</td><td>3001</td></tr>
+    <tr><td><code>worker</code></td><td>Exécute le pipeline vidéo (files Redis)</td><td>—</td></tr>
+    <tr><td><code>postgres</code></td><td>Base de données</td><td>5432</td></tr>
+    <tr><td><code>redis</code></td><td>Files d'attente + verrous + rate-limiting</td><td>6379</td></tr>
+  </table>
+  <div class="note"><b>Fichiers clés sur le serveur :</b> code dans <code>~/VideoFactory</code>, secrets dans <code>~/VideoFactory/infra/.env</code> (jamais commité), config nginx dans <code>~/VideoFactory/infra/nginx.conf</code>.</div>
+
+  <div class="note"><b>Où sont stockées les vidéos :</b> dans le bucket OVH (Object Storage, S3-compatible). Le backend « local » de l'app stocke sur le disque du serveur (éphémère, non persistant) — il est recommandé de le désactiver pour ne garder que OVH.</div>
+
+  <footer>Video Factory — référence complète des commandes serveur. 🚀</footer>
+</div>
+</body>
+</html>

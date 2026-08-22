@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Factory — Guide de déploiement OVHCloud (complet)</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --panel:#121215; --panel2:#18181c;
+    --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+    --text:#f2f0ea; --muted:#9a968d; --faint:#6b685f;
+    --gold:#d4a24c; --gold2:#e6c88a; --ok:#4ade80; --warn:#eab308; --danger:#f87171;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .page{max-width:900px;margin:0 auto;padding:48px 32px 96px}
+  header{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:15px;margin-bottom:20px}
+  .logo{width:32px;height:32px;border:1px solid var(--gold);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border-radius:2px}
+  .kicker{font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.18em;font-weight:600;margin-bottom:8px}
+  h1{font-family:var(--serif);font-weight:400;font-size:34px;margin:0 0 8px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);max-width:660px}
+  h2{font-family:var(--serif);font-weight:400;font-size:23px;margin:44px 0 6px;padding-top:26px;border-top:1px solid var(--border);letter-spacing:-.01em}
+  h2 .n{color:var(--gold);font-size:14px;vertical-align:top;margin-right:8px;font-family:ui-sans-serif,sans-serif;letter-spacing:.1em}
+  h3{font-size:15px;font-weight:600;margin:24px 0 6px;color:var(--gold2)}
+  p{margin:8px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:6px 0}
+  li::marker{color:var(--gold)}
+  .cmd{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin:10px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.8;overflow-x:auto}
+  .cmd .c{color:var(--gold2)}
+  .cmd .cm{color:var(--faint)}
+  .cmd .p{color:#7dd3fc}
+  code{background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:13px;color:var(--gold2);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .note{border-left:2px solid var(--gold);background:rgba(212,162,76,.06);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-size:14px}
+  .note b{color:var(--gold2)}
+  .warn{border-left:2px solid var(--warn);background:rgba(234,179,8,.06);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-size:14px}
+  .warn b{color:var(--warn)}
+  .danger{border-left:2px solid var(--danger);background:rgba(248,113,113,.06);padding:12px 16px;border-radius:0 4px 4px 0;margin:14px 0;font-size:14px}
+  .danger b{color:var(--danger)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;border:1px solid var(--border)}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
+  td{padding:9px 14px;border-top:1px solid var(--border);font-size:14px;vertical-align:top}
+  td code{white-space:nowrap}
+  .toc{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:18px 22px;margin:20px 0}
+  .toc a{color:var(--gold2);text-decoration:none}
+  .toc li{margin:4px 0}
+  footer{margin-top:56px;border-top:1px solid var(--border);padding-top:20px;color:var(--faint);font-size:13px}
+  @media print{
+    body{background:#fff;color:#111;font-size:12px}
+    .page{max-width:100%;padding:20px}
+    .cmd,.note,.warn,.danger,.toc{background:#f7f7f7;border-color:#ddd}
+    :root{--bg:#fff;--panel:#f5f5f5;--border:#ddd;--text:#111;--muted:#555;--gold:#8a6a1f;--gold2:#a8822e}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brand"><div class="logo">VF</div><span>Video Factory</span></div>
+    <div class="kicker">Déploiement — édition complète</div>
+    <h1>Guide de déploiement sur OVHCloud</h1>
+    <p>Mettre en ligne l'application de A à Z, du premier clic dans l'espace client OVH jusqu'à la génération de la première vidéo — avec toutes les informations qui manquaient auparavant (clé SSH, pare-feu, utilisateur S3, dépannage).</p>
+  </header>
+
+  <div class="toc">
+    <b style="color:var(--gold2)">Sommaire</b>
+    <ol style="margin:8px 0 0">
+      <li><a href="#prerequis">Prérequis</a></li>
+      <li><a href="#instance">Créer l'instance Public Cloud</a></li>
+      <li><a href="#parefeu">Ouvrir le pare-feu (ports 80/22)</a></li>
+      <li><a href="#ssh">Se connecter en SSH</a></li>
+      <li><a href="#docker">Installer Docker</a></li>
+      <li><a href="#code">Récupérer le code</a></li>
+      <li><a href="#env">Configurer les secrets (.env)</a></li>
+      <li><a href="#deploy">Lancer le déploiement</a></li>
+      <li><a href="#bucket">Configurer le bucket OVH (Object Storage)</a></li>
+      <li><a href="#appstorage">Brancher le stockage dans l'app</a></li>
+      <li><a href="#seed">Créer les comptes</a></li>
+      <li><a href="#video">Générer la première vidéo</a></li>
+      <li><a href="#maj">Mettre à jour l'application</a></li>
+      <li><a href="#depannage">Dépannage (erreurs courantes)</a></li>
+    </ol>
+  </div>
+
+  <div class="note"><b>Vue d'ensemble :</b> l'application est composée de 6 services Docker (nginx, frontend, backend, worker, postgres, redis). Les vidéos générées sont stockées dans un <b>bucket Object Storage OVH</b> (S3-compatible). Dans un premier temps, le pipeline produit une vidéo <b>« placeholder »</b> (images unies + sons de test) — le contenu réel viendra avec les vrais providers IA.</div>
+
+  <h2 id="prerequis"><span class="n">01</span>Prérequis</h2>
+  <ul>
+    <li>Un compte <b>OVHcloud</b> actif (espace client).</li>
+    <li>Une <b>clé SSH publique</b> (pour se connecter au serveur). Si vous n'en avez pas : générez une paire sur votre PC.</li>
+    <li>Les <b>identifiants du bucket Object Storage</b> (access key + secret key), ou la possibilité d'en créer.</li>
+    <li>Un <b>token GitHub</b> pour cloner le repo privé (voir étape 06).</li>
+  </ul>
+
+  <h3>Générer une clé SSH (si nécessaire)</h3>
+  <p>Sur votre PC (PowerShell ou Git Bash) :</p>
+  <div class="cmd"><span class="c">ssh-keygen -t ed25519 -C "votre-email@exemple.com"</span></div>
+  <p>Cela crée deux fichiers : la <b>clé privée</b> (à garder secrète, ex. <code>~/.ssh/id_ed25519</code>) et la <b>clé publique</b> (<code>~/.ssh/id_ed25519.pub</code>). La clé publique est celle qu'on colle dans OVH.</p>
+
+  <h2 id="instance"><span class="n">02</span>Créer l'instance Public Cloud</h2>
+  <ol>
+    <li>Espace client OVH → <b>Public Cloud</b> → <b>Instances</b> → <b>Créer une instance</b>.</li>
+    <li>Renseignez :
+      <ul>
+        <li><b>Région</b> : idéalement la même que votre bucket Object Storage (ex. Paris).</li>
+        <li><b>Image</b> : <b>Ubuntu 22.04 LTS</b> (ou 24.04).</li>
+        <li><b>Modèle (flavor)</b> : <b>b2-7</b> (2 vCPU, 7 Go RAM) minimum — l'encodage vidéo 1080p est gourmand.</li>
+        <li><b>Clé SSH</b> : collez votre <b>clé publique</b> (l'étape qui affiche un champ « Clé SSH publique »).</li>
+      </ul>
+    </li>
+    <li>Créez l'instance, puis notez l'<b>adresse IP publique</b> qui s'affiche.</li>
+  </ol>
+  <div class="note"><b>Astuce coût :</b> le Public Cloud est facturé à l'heure. Éteignez l'instance quand vous ne l'utilisez pas (vous ne payez alors que le stockage du disque).</div>
+
+  <h2 id="parefeu"><span class="n">03</span>Ouvrir le pare-feu (ports 80 et 22)</h2>
+  <p>C'est une étape qu'on oublie souvent, et c'est elle qui fait que « la page ne se charge pas » depuis l'extérieur.</p>
+  <ol>
+    <li>Espace client OVH → <b>Public Cloud</b> → votre instance → onglet <b>« Security groups »</b> (ou « Groupe de sécurité »).</li>
+    <li>Assurez-vous que ces ports sont <b>ouverts en entrée</b> :
+      <ul>
+        <li><b>Port 22</b> (SSH) — pour se connecter.</li>
+        <li><b>Port 80</b> (HTTP) — pour accéder à l'application.</li>
+      </ul>
+    </li>
+    <li>Si une règle manque, ajoutez-la (type TCP, port, source « partout » ou votre IP).</li>
+  </ol>
+  <div class="note"><b>Plus tard (HTTPS) :</b> quand vous ajouterez un nom de domaine, il faudra aussi ouvrir le port <b>443</b>.</div>
+
+  <h2 id="ssh"><span class="n">04</span>Se connecter en SSH</h2>
+  <p>Depuis votre PC, avec votre clé privée :</p>
+  <div class="cmd"><span class="cm"># Exemple avec la clé privée .pem téléchargée (adaptez le chemin et l'IP)</span>
+<span class="c">ssh -i C:/Users/ToshR/Downloads/ovh_cle_ssh_privee.pem ubuntu@57.130.39.132</span></div>
+  <p>À la première connexion, répondez <code>yes</code> à la question sur l'empreinte (fingerprint).</p>
+  <div class="warn"><b>Erreur fréquente « Permission denied (publickey) » :</b> cela signifie que la clé publique n'a pas été associée à l'instance, ou que vous pointez vers la mauvaise clé privée. Vérifiez que la clé publique a bien été ajoutée à la création de l'instance.</div>
+
+  <h2 id="docker"><span class="n">05</span>Installer Docker</h2>
+  <p>Une fois connecté au serveur :</p>
+  <div class="cmd"><span class="c">sudo apt-get update</span>
+<span class="c">sudo apt-get install -y docker.io docker-compose-plugin</span>
+<span class="c">sudo usermod -aG docker $USER</span>
+<span class="cm"># se déconnecter puis se reconnecter pour activer le groupe docker</span>
+<span class="c">exit</span></div>
+  <p>Reconnectez-vous, puis vérifiez :</p>
+  <div class="cmd"><span class="c">docker --version</span>
+<span class="c">docker compose version</span></div>
+
+  <h2 id="code"><span class="n">06</span>Récupérer le code</h2>
+  <div class="cmd"><span class="c">git clone https://github.com/bamel222/VideoFactory.git</span>
+<span class="c">cd VideoFactory</span></div>
+  <div class="note"><b>Le repo est privé :</b> git vous demandera vos identifiants. Utilisez votre <b>nom d'utilisateur GitHub</b> + un <b>token d'accès personnel</b> (pas votre mot de passe — GitHub ne l'accepte plus).</div>
+  <h3>Créer un token GitHub (si besoin)</h3>
+  <ol>
+    <li>GitHub → votre avatar → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b>.</li>
+    <li><b>Generate new token</b> → sélectionnez le repo <b>bamel222/VideoFactory</b> → permission <b>Contents : Read-only</b> (suffit pour cloner/puller).</li>
+    <li>Copiez le token, puis utilisez-le comme « mot de passe » lors du clone.</li>
+  </ol>
+  <p>Pour éviter de ressaisir le token à chaque <code>git pull</code>, enregistrez-le une fois :</p>
+  <div class="cmd"><span class="c">git config --global credential.helper store</span></div>
+
+  <h2 id="env"><span class="n">07</span>Configurer les secrets (.env)</h2>
+  <div class="cmd"><span class="c">cd ~/VideoFactory/infra</span>
+<span class="c">cp .env.production.example .env</span>
+<span class="c">nano .env</span></div>
+  <p>Générez les deux secrets obligatoires (à coller dans le fichier) :</p>
+  <div class="cmd"><span class="c">openssl rand -base64 32</span>   <span class="cm"># → collez dans ENCRYPTION_KEY</span>
+<span class="c">openssl rand -base64 32</span>   <span class="cm"># → collez dans JWT_SECRET</span></div>
+  <p>Renseignez aussi :</p>
+  <table>
+    <tr><th>Variable</th><th>Valeur</th></tr>
+    <tr><td><code>POSTGRES_PASSWORD</code></td><td>un mot de passe fort (base de données)</td></tr>
+    <tr><td><code>ENCRYPTION_KEY</code></td><td>le résultat d'<code>openssl rand -base64 32</code></td></tr>
+    <tr><td><code>JWT_SECRET</code></td><td>un autre <code>openssl rand -base64 32</code></td></tr>
+    <tr><td><code>APP_BASE_URL</code></td><td><code>http://57.130.39.132</code> (votre IP)</td></tr>
+  </table>
+  <div class="danger"><b>Critique :</b> sans <code>ENCRYPTION_KEY</code> et <code>JWT_SECRET</code> forts, le backend <b>refuse de démarrer en production</b> (garde-fou de sécurité intégré).</div>
+
+  <h2 id="deploy"><span class="n">08</span>Lancer le déploiement</h2>
+  <div class="cmd"><span class="c">cd ~/VideoFactory</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml --env-file infra/.env up -d --build</span></div>
+  <p>Le premier build prend <b>10 à 20 minutes</b> (installation des dépendances + build Next.js). Attendez le retour au prompt.</p>
+  <p>Vérifiez que les 6 conteneurs sont en <code>Up</code> :</p>
+  <div class="cmd"><span class="c">docker compose -f infra/docker-compose.deploy.yml ps</span></div>
+  <p>Puis testez le backend (doit renvoyer du JSON, pas du HTML) :</p>
+  <div class="cmd"><span class="c">curl -s -X POST http://localhost/api/v1/auth/login \</span>
+<span class="c">  -H "Content-Type: application/json" \</span>
+<span class="c">  -d '{"email":"owner@vf.ai","password":"password123"}'</span></div>
+
+  <h2 id="bucket"><span class="n">09</span>Configurer le bucket OVH (Object Storage)</h2>
+  <h3>9.1 — Créer le bucket</h3>
+  <ol>
+    <li>Espace client OVH → <b>Object Storage</b> → <b>Créer un conteneur/bucket</b>.</li>
+    <li>Choisissez la solution <b>S3 API</b>, la région <b>Paris</b>, et un nom <b>tout en minuscules, sans underscore</b> (ex. <code>ovh-stockage-videos</code>).</li>
+  </ol>
+  <div class="warn"><b>Règle de nommage S3 :</b> les noms de bucket n'acceptent que les <b>lettres minuscules, chiffres et tirets</b>. Pas de majuscules, pas de <code>_</code>, pas d'espaces. Un nom invalide provoque des erreurs de connexion.</div>
+
+  <h3>9.2 — Créer l'utilisateur S3 (avec les bons droits)</h3>
+  <ol>
+    <li>Espace client OVH → <b>Object Storage</b> → onglet <b>« S3 Users »</b> → <b>Créer un utilisateur</b>.</li>
+    <li>Notez immédiatement l'<b>access key</b> et la <b>secret key</b> (la secret key ne s'affiche qu'une fois).</li>
+    <li>Allez dans <b>« My containers »</b> → votre bucket → menu <b>« … »</b> → <b>« Add user »</b> → sélectionnez votre utilisateur → rôle <b>« ObjectStore operator »</b> (ou <b>Administrator</b>).</li>
+  </ol>
+  <div class="danger"><b>Point crucial :</b> le rôle doit inclure la permission de <b>suppression</b> (<code>s3:DeleteObject</code>). Sans elle, le nettoyage automatique des fichiers intermédiaires échouera silencieusement et votre bucket se remplira de fichiers inutiles.</div>
+
+  <h3>9.3 — Les codes de région OVH</h3>
+  <table>
+    <tr><th>Région</th><th>Code</th><th>Endpoint S3</th></tr>
+    <tr><td>Paris</td><td><code>eu-west-par</code></td><td><code>https://s3.eu-west-par.io.cloud.ovh.net</code></td></tr>
+    <tr><td>Gravelines</td><td><code>gra</code></td><td><code>https://s3.gra.io.cloud.ovh.net</code></td></tr>
+    <tr><td>Strasbourg</td><td><code>sbg</code></td><td><code>https://s3.sbg.io.cloud.ovh.net</code></td></tr>
+    <tr><td>Francfort</td><td><code>de</code></td><td><code>https://s3.de.io.cloud.ovh.net</code></td></tr>
+  </table>
+  <div class="note"><b>Attention à la confusion :</b> <code>eu-west-par-b</code> (vu sur la page de l'instance) est la <b>zone de disponibilité de l'instance de calcul</b>, PAS le code Object Storage. Pour le stockage, c'est <b><code>eu-west-par</code></b> (sans le <code>-b</code>).</div>
+
+  <h2 id="appstorage"><span class="n">10</span>Brancher le stockage dans l'app</h2>
+  <ol>
+    <li>Ouvrez l'app <code>http://57.130.39.132</code> → connectez-vous en owner.</li>
+    <li><b>Stockage</b> → remplissez :
+      <ul>
+        <li><b>Nom</b> : <code>OVH Bucket</code></li>
+        <li><b>Type</b> : <code>s3</code></li>
+        <li><b>Priorité</b> : <code>1</code></li>
+        <li><b>Région</b> : <code>eu-west-par</code></li>
+        <li><b>Config (JSON)</b> :</li>
+      </ul>
+    </li>
+  </ol>
+  <div class="cmd">{<br>&nbsp;&nbsp;"endpoint_url": "https://s3.eu-west-par.io.cloud.ovh.net",<br>&nbsp;&nbsp;"bucket": "ovh-stockage-videos",<br>&nbsp;&nbsp;"access_key": "VOTRE_ACCESS_KEY",<br>&nbsp;&nbsp;"secret_key": "VOTRE_SECRET_KEY",<br>&nbsp;&nbsp;"region": "eu-west-par"<br>}</div>
+  <p>Cliquez <b>Créer</b>, puis <b>Healthcheck</b> → doit afficher <b>OK</b>.</p>
+  <div class="note"><b>Le JSON doit être valide :</b> les clés entre guillemets doubles <code>"</code>, les valeurs texte entre guillemets, des virgules entre chaque paire (mais pas après la dernière).</div>
+
+  <h2 id="seed"><span class="n">11</span>Créer les comptes</h2>
+  <p>Si la base est vide (première installation), créez les comptes :</p>
+  <div class="cmd"><span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.seed</span></div>
+  <p>Comptes créés : <code>owner@vf.ai</code>, <code>admin@vf.ai</code>, <code>reviewer@vf.ai</code> — mot de passe <code>password123</code>.</p>
+  <div class="warn"><b>Sécurité :</b> changez le mot de passe du compte owner dès la première connexion (bouton « Mot de passe » en bas de la barre latérale).</div>
+
+  <h2 id="video"><span class="n">12</span>Générer la première vidéo</h2>
+  <ol>
+    <li><b>Séries &amp; Pipelines</b> → remplissez le formulaire (Titre, Type = Documentaire, Format = Photo-Cinéma, Durée 24, Épisodes 1, Sujet).</li>
+    <li>Cliquez <b>Créer</b> (bouton en bas à droite).</li>
+    <li>Dans le tableau, sur votre série : <b>Dry run</b> (vérifie coûts/risques), puis <b>Lancer</b>.</li>
+    <li>Suivez la progression dans <b>Jobs &amp; Checkpoints</b>, ou sur le serveur : <code>docker compose -f infra/docker-compose.deploy.yml logs -f worker</code>.</li>
+  </ol>
+  <p>À la fin (statut <code>done</code>), la <b>vidéo finale 1080p</b> et le <b>short</b> sont dans votre bucket OVH, dans <code>series/&lt;id&gt;/task_…/</code>. Les fichiers intermédiaires sont supprimés automatiquement.</p>
+
+  <h2 id="maj"><span class="n">13</span>Mettre à jour l'application</h2>
+  <p>À lancer à chaque nouvelle version du code. <b>À retenir absolument.</b></p>
+  <div class="cmd"><span class="c">cd ~/VideoFactory</span>
+<span class="c">git pull</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml --env-file infra/.env up -d --build</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml up -d --force-recreate nginx</span></div>
+  <div class="warn"><b>Attendre la fin complète du build</b> avant de tester. Pendant le build, le site peut afficher un <code>502</code> — c'est normal et temporaire.</div>
+
+  <h2 id="depannage"><span class="n">14</span>Dépannage (erreurs courantes)</h2>
+
+  <h3>« Unexpected token '&lt;', "&lt;html&gt;…" is not valid JSON »</h3>
+  <p>Le frontend reçoit du HTML au lieu du JSON → nginx renvoie une page d'erreur. Cause : le backend n'est pas joignable.</p>
+  <div class="cmd"><span class="cm"># Vérifier que le backend est healthy</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml ps</span>
+<span class="cm"># Si 502 persiste, recréer nginx (il a mémorisé une ancienne adresse)</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml restart nginx</span></div>
+
+  <h3>« 502 Bad Gateway »</h3>
+  <p>nginx ne joint pas le backend/frontend. Deux causes : (1) le build n'est pas fini, (2) nginx a gardé l'ancienne IP d'un conteneur recréé → <code>restart nginx</code> (corrigé définitivement par la config avec résolveur DNS).</p>
+
+  <h3>Healthcheck stockage = KO avec « HeadBucket … 404 Not Found »</h3>
+  <p>L'endpoint et les clés sont corrects, mais le <b>nom du bucket est faux</b> (majuscules, underscores, ou inexistant). Vérifiez le nom exact dans OVH.</p>
+
+  <h3>Healthcheck = KO avec « AccessDenied » / « 403 »</h3>
+  <p>La clé n'a pas la permission demandée. Ajoutez le rôle « operator/admin » à l'utilisateur S3, ou recréez un utilisateur S3 avec le bon rôle.</p>
+
+  <h3>« relation "series" does not exist » (migration)</h3>
+  <p>Corrigé (les clés étrangères cycliques ont été cassées). Si ça réapparaît sur une vieille base, repartez de zéro :</p>
+  <div class="cmd"><span class="c">docker compose -f infra/docker-compose.deploy.yml down -v</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml --env-file infra/.env up -d --build</span>
+<span class="c">docker compose -f infra/docker-compose.deploy.yml exec backend python -m app.scripts.seed</span></div>
+
+  <h3>La page ne se charge pas depuis l'extérieur (mais marche en localhost)</h3>
+  <p>Le pare-feu bloque le port 80. Ouvrez-le dans le groupe de sécurité de l'instance (étape 03).</p>
+
+  <footer>Video Factory — guide de déploiement OVHCloud (édition complète). Bonne production ! 🚀</footer>
+</div>
+</body>
+</html>
