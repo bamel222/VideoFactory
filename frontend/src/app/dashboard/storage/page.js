@@ -150,7 +150,7 @@ export default function StoragePage() {
       <div className="card mb">
         <h2>Nouveau backend de stockage</h2>
         <form onSubmit={create}>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 140px 100px 120px auto", alignItems: "end" }}>
+          <div className="grid" style={{ gridTemplateColumns: "1fr 140px 100px 120px 120px", alignItems: "end" }}>
             <Field label="Nom"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
             <Field label="Type">
               <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
@@ -164,11 +164,13 @@ export default function StoragePage() {
                 <option value="active">active</option><option value="disabled">disabled</option>
               </select>
             </Field>
-            <button type="submit" disabled={busy === "create"}>{busy === "create" ? "..." : "Créer"}</button>
           </div>
           <Field label="Config (JSON)" hint={'Ex. S3/OVH : {"endpoint_url":"https://s3.eu-west-par.io.cloud.ovh.net","bucket":"…","access_key":"…","secret_key":"…","region":"eu-west-par"}'}>
             <textarea rows="5" value={form.config} onChange={(e) => setForm({ ...form, config: e.target.value })} style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }} />
           </Field>
+          <div className="row" style={{ justifyContent: "center", marginTop: 16 }}>
+            <button type="submit" disabled={busy === "create"}>{busy === "create" ? "..." : "Créer"}</button>
+          </div>
         </form>
       </div>
 

@@ -148,7 +148,7 @@ export default function SeriesPage() {
                 <option value="cartoon">Cartoon</option>
               </select>
             </Field>
-            <Field label="Format de génération" hint="Survolez une option pour plus de détails">
+            <Field label="Format de génération">
               <select
                 value={form.generation_mode}
                 onChange={(e) => setForm({ ...form, generation_mode: e.target.value })}
@@ -159,7 +159,7 @@ export default function SeriesPage() {
                 ))}
               </select>
             </Field>
-            <Field label="Durée / ép (min)" hint="24 à 28 minutes">
+            <Field label="Durée / ép (min)">
               <input type="number" min="24" max="28" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })} />
             </Field>
             <Field label="Épisodes">
@@ -167,8 +167,8 @@ export default function SeriesPage() {
             </Field>
           </div>
           <div className="grid" style={{ gridTemplateColumns: "1fr 220px 180px", alignItems: "start" }}>
-            <Field label="Sujet (max 3000 caractères)" hint="Décrivez l'idée globale de la série">
-              <textarea rows="4" maxLength="3000" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required placeholder="Ex : une série documentaire grand public sur l'histoire des océans, du rôle des courants à la biodiversité des abysses..." />
+            <Field label="Sujet (facultatif, max 3000 caractères)" hint="Décrivez l'idée globale de la série — laissez vide pour un sujet générique">
+              <textarea rows="4" maxLength="3000" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="Ex : une série documentaire grand public sur l'histoire des océans, du rôle des courants à la biodiversité des abysses..." />
             </Field>
             <Field label="Langue">
               <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
