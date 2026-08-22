@@ -90,8 +90,16 @@ class LocalStorageAdapter(StorageAdapter):
             os.remove(abs_path)
 
     def healthcheck(self) -> bool:
+        # Verify the root exists AND is writable (not just that makedirs works).
         os.makedirs(self.root, exist_ok=True)
-        return True
+        probe = os.path.join(self.root, ".vf_probe")
+        try:
+            with open(probe, "wb") as f:
+                f.write(b"ok")
+            os.remove(probe)
+            return True
+        except OSError:
+            return False
 
 
 class S3CompatibleAdapter(StorageAdapter):
@@ -103,13 +111,16 @@ class S3CompatibleAdapter(StorageAdapter):
 
         self.bucket = config.get("bucket", "video-factory")
         # Path-style addressing: required by single-endpoint S3 providers
-        # (OVHcloud, MinIO, …) where the endpoint is not bucket-specific.
+        # (OVHcloud, MinIO, Backblaze B2, Cloudflare R2) where the endpoint is
+        # not bucket-specific.
+        # verify_ssl=False allows self-signed TLS (common with self-hosted MinIO).
         self.client = boto3.client(
             "s3",
             endpoint_url=config.get("endpoint_url"),
             region_name=config.get("region", "us-east-1"),
             aws_access_key_id=config.get("access_key"),
             aws_secret_access_key=config.get("secret_key"),
+            verify=config.get("verify_ssl", True),
             config=BotoConfig(s3={"addressing_style": "path"}),
         )
 
@@ -138,7 +149,7 @@ class S3CompatibleAdapter(StorageAdapter):
 
 class SupabaseStorageAdapter(StorageAdapter):
     def __init__(self, config: dict):
-        self.url = config.get("url") or settings.supabase_url
+        self.url = (config.get("url") or settings.supabase_url or "").rstrip("/")
         self.key = config.get("service_role_key") or settings.supabase_service_role_key
         self.bucket = config.get("bucket", "assets")
 
@@ -177,7 +188,13 @@ class SupabaseStorageAdapter(StorageAdapter):
             timeout=30,
         )
         resp.raise_for_status()
-        return f"{self.url}/storage/v1{resp.json()['signedURL']}"
+        # Supabase returns a RELATIVE path (e.g. "/object/sign/bucket/key?token=…").
+        signed = (resp.json() or {}).get("signedURL") or (resp.json() or {}).get("url") or ""
+        if not signed:
+            raise RuntimeError("Supabase did not return a signed URL")
+        if signed.startswith("http"):
+            return signed
+        return f"{self.url}/storage/v1{signed}"
 
     def delete(self, path: str) -> None:
         httpx.delete(
@@ -196,6 +213,75 @@ class SupabaseStorageAdapter(StorageAdapter):
             return False
 
 
+class PCloudStorageAdapter(StorageAdapter):
+    """pCloud via its REST API (OAuth2 access token, no SDK required).
+
+    Config: {"api_endpoint": "https://api.pcloud.com", "access_token": "...",
+             "root": "/video-factory"}  (api_endpoint = eapi.pcloud.com for EU)
+    """
+
+    def __init__(self, config: dict):
+        self.endpoint = (config.get("api_endpoint") or "https://api.pcloud.com").rstrip("/")
+        self.access_token = config.get("access_token") or config.get("oauth_token") or ""
+        self.root = (config.get("root") or "/video-factory").strip("/")
+
+    def _headers(self) -> dict:
+        return {"Authorization": f"Bearer {self.access_token}"}
+
+    def _request(self, method: str, path: str, **kwargs) -> dict:
+        resp = httpx.request(
+            method, f"{self.endpoint}{path}", headers=self._headers(), timeout=120, **kwargs
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("result") != 0:
+            raise RuntimeError(f"pCloud error: {data.get('error')}")
+        return data
+
+    def _remote_path(self, path: str) -> str:
+        clean = "/".join(p for p in path.strip("/").split("/") if p)
+        return f"/{self.root}/{clean}"
+
+    def _ensure_folders(self, remote_path: str) -> None:
+        # uploadfile does NOT auto-create parents; create them top-down.
+        parts = remote_path.strip("/").split("/")[:-1]  # drop the filename
+        current = ""
+        for part in parts:
+            current = f"{current}/{part}" if current else f"/{part}"
+            self._request("POST", "/createfolderifnotexists", params={"path": current})
+
+    def upload_stream(self, path: str, src, content_type: str = "") -> str:
+        remote = self._remote_path(path)
+        self._ensure_folders(remote)
+        self._request("POST", "/uploadfile", params={"path": remote}, content=src)
+        return path
+
+    def download(self, path: str) -> bytes:
+        link = self._request("GET", "/getfilelink", params={"path": self._remote_path(path)})
+        hosts = link.get("hosts") or []
+        if not hosts:
+            raise RuntimeError("pCloud: no download host returned")
+        resp = httpx.get(f"https://{hosts[0]}{link['path']}", timeout=120)
+        resp.raise_for_status()
+        return resp.content
+
+    def signed_url(self, path: str, expires: int = 3600) -> str:
+        # pCloud getfilelink returns a short-lived direct link (expiry is
+        # provider-controlled; the `expires` arg is accepted for interface parity).
+        link = self._request("GET", "/getfilelink", params={"path": self._remote_path(path)})
+        hosts = link.get("hosts") or []
+        if not hosts:
+            raise RuntimeError("pCloud: no download host returned")
+        return f"https://{hosts[0]}{link['path']}"
+
+    def delete(self, path: str) -> None:
+        self._request("GET", "/deletefile", params={"path": self._remote_path(path)})
+
+    def healthcheck(self) -> bool:
+        self._request("GET", "/userinfo")
+        return True
+
+
 def build_adapter(storage: StorageBackend) -> StorageAdapter:
     config = json.loads(decrypt_secret(storage.config_encrypted) or "{}")
     _validate_storage_config(storage.kind, config)
@@ -206,7 +292,7 @@ def build_adapter(storage: StorageBackend) -> StorageAdapter:
     if storage.kind == "supabase":
         return SupabaseStorageAdapter(config)
     if storage.kind == "pcloud":
-        raise HTTPException(501, "pCloud adapter requires pCloud SDK (configured separately)")
+        return PCloudStorageAdapter(config)
     raise HTTPException(400, f"Unknown storage kind: {storage.kind}")
 
 
@@ -264,6 +350,8 @@ def _validate_storage_config(kind: str, config: dict) -> None:
         urls.append(config.get("url") or settings.supabase_url)
     elif kind in ("s3", "r2", "b2", "minio"):
         urls.append(config.get("endpoint_url"))
+    elif kind == "pcloud":
+        urls.append(config.get("api_endpoint"))
 
     for u in urls:
         if not u:
