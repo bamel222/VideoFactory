@@ -165,7 +165,6 @@ export default function SeriesPage() {
             <Field label="Épisodes">
               <input type="number" min="1" max="10" value={form.planned_episodes} onChange={(e) => setForm({ ...form, planned_episodes: Number(e.target.value) })} />
             </Field>
-            <button type="submit">Créer</button>
           </div>
           <div className="grid" style={{ gridTemplateColumns: "1fr 220px 180px", alignItems: "start" }}>
             <Field label="Sujet (max 3000 caractères)" hint="Décrivez l'idée globale de la série">
@@ -189,6 +188,9 @@ export default function SeriesPage() {
             )}
           </div>
           <NotifyCheckboxes value={form.notify} onChange={(n) => setForm({ ...form, notify: n })} />
+          <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}>
+            <button type="submit">Créer</button>
+          </div>
         </form>
       </div>
 

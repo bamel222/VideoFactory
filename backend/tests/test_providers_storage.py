@@ -55,7 +55,7 @@ def test_storage_multi_backend(client, owner_token):
     # Create a second active backend
     r = client.post(
         "/api/v1/storage",
-        json={"name": "Backup", "kind": "local", "config": {"root": "./data/storage2"}, "priority": 20},
+        json={"name": "Backup", "kind": "nas", "config": {"root": "./data/storage2"}, "priority": 20},
         headers={"Authorization": f"Bearer {owner_token}"},
     )
     assert r.status_code == 200, r.text

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { PageHeader, SkeletonRows, Field, Modal, useToast } from "@/components/ui";
 
-const KINDS = ["local", "pcloud", "supabase", "s3", "r2", "b2", "minio", "nas"];
-const EMPTY_FORM = { name: "", kind: "local", config: '{"root":"./data/storage"}', priority: 100, status: "active", region: "" };
+const KINDS = ["s3", "r2", "b2", "minio", "supabase", "nas", "pcloud"];
+const EMPTY_FORM = { name: "", kind: "s3", config: "{}", priority: 1, status: "active", region: "" };
 
 export default function StoragePage() {
   const [backends, setBackends] = useState(null);

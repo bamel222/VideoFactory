@@ -17,7 +17,6 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.models import User, Workspace
 from app.schemas.auth import ChangePasswordRequest, LoginRequest, RegisterRequest, TokenResponse, UserOut
 from app.registries.provider_registry import seed_fake_providers
-from app.registries.storage_registry import StorageRegistry
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -50,7 +49,6 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
         ws.owner_id = user.id
 
     seed_fake_providers(db, ws.id)
-    StorageRegistry(db, ws.id).create_default_local()
     db.commit()
 
     audit_log(db, user.id, "auth.register", "user", user.id, {"role": role}, request.client.host if request.client else None)

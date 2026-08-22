@@ -8,7 +8,6 @@ from app.core.db import SessionLocal, init_db
 from app.core.security import hash_password
 from app.models import PasswordHistory, User, Workspace
 from app.registries.provider_registry import seed_fake_providers
-from app.registries.storage_registry import StorageRegistry
 
 
 def run() -> None:
@@ -34,7 +33,6 @@ def run() -> None:
     ws.owner_id = owner.id
 
     seed_fake_providers(db, ws.id)
-    StorageRegistry(db, ws.id).create_default_local()
     db.commit()
 
     print("Seed done. Accounts:")

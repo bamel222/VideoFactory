@@ -25,8 +25,25 @@ def client():
     from app.scripts.seed import run as seed_run
 
     seed_run()
+    _seed_test_storage()
     with TestClient(app) as c:
         yield c
+
+
+def _seed_test_storage() -> None:
+    """Create an active NAS backend (LocalStorageAdapter) for workspace 1 so the
+    pipeline can store assets during tests. 'local' is no longer a valid kind."""
+    from app.core.db import SessionLocal
+    from app.registries.storage_registry import StorageRegistry
+    from app.schemas.provider import StorageCreate
+
+    root = tempfile.mkdtemp(prefix="vf_test_storage_")
+    db = SessionLocal()
+    try:
+        reg = StorageRegistry(db, 1)
+        reg.create(StorageCreate(name="Test NAS", kind="nas", config={"root": root}, priority=10, status="active"))
+    finally:
+        db.close()
 
 
 @pytest.fixture()

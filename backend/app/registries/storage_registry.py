@@ -199,8 +199,6 @@ class SupabaseStorageAdapter(StorageAdapter):
 def build_adapter(storage: StorageBackend) -> StorageAdapter:
     config = json.loads(decrypt_secret(storage.config_encrypted) or "{}")
     _validate_storage_config(storage.kind, config)
-    if storage.kind == "local":
-        return LocalStorageAdapter(root=config.get("root"))
     if storage.kind == "nas":
         return LocalStorageAdapter(root=config.get("root") or "/mnt/nas")
     if storage.kind in ("s3", "r2", "b2", "minio"):
@@ -298,7 +296,7 @@ class StorageRegistry:
         return s
 
     def create(self, data) -> StorageBackend:
-        if data.kind not in ("local", "pcloud", "supabase", "s3", "r2", "b2", "minio", "nas"):
+        if data.kind not in ("pcloud", "supabase", "s3", "r2", "b2", "minio", "nas"):
             raise HTTPException(400, f"Invalid storage kind: {data.kind}")
         # Validate the endpoint/config up front (SSRF guard) so a bad config
         # fails at creation time with a clear error instead of a silent "ko".
@@ -353,13 +351,7 @@ class StorageRegistry:
     def select_active(self) -> list[StorageBackend]:
         actives = [s for s in self.list() if s.status == "active"]
         actives.sort(key=lambda s: s.priority)
-        return actives or [self.create_default_local()]
-
-    def create_default_local(self) -> StorageBackend:
-        local = next((s for s in self.list() if s.kind == "local"), None)
-        if local:
-            return local
-        return self.create(StorageCreateShim("Local", "local", {}, 0, 0.0, "active", "", ""))
+        return actives
 
     def store_asset(self, path: str, data: bytes, kind: str = "file", content_type: str = "", replicas: int | None = None) -> list[Asset]:
         """Upload in-memory bytes (convenience wrapper around the streaming path)."""
@@ -420,18 +412,3 @@ class StorageRegistry:
     def signed_url_for(self, asset: Asset, expires: int = 3600) -> str:
         backend = self.get(asset.storage_id)
         return build_adapter(backend).signed_url(asset.path, expires)
-
-
-class StorageCreateShim:
-    """Small shim to allow default-local creation from code."""
-
-    def __init__(self, name, kind, config, priority, cost, status, region, replication):
-        self.name = name
-        self.kind = kind
-        self.config = config
-        self.priority = priority
-        self.quota_bytes = 0
-        self.cost_per_gb = cost
-        self.status = status
-        self.region = region
-        self.replication = replication

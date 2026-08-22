@@ -35,7 +35,7 @@ class Provider(Base, TimestampMixin):
     healthy: Mapped[bool] = mapped_column(default=True, nullable=False)
 
 
-STORAGE_KINDS = ("local", "pcloud", "supabase", "s3", "r2", "b2", "minio", "nas")
+STORAGE_KINDS = ("pcloud", "supabase", "s3", "r2", "b2", "minio", "nas")
 
 
 class StorageBackend(Base, TimestampMixin):
