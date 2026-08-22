@@ -77,7 +77,12 @@ def _delete_asset_and_local(db: Session, cp) -> int:
                     build_adapter(backend).delete(asset.path)
                     backend.used_bytes = max(0, backend.used_bytes - asset.size)
             except Exception as exc:  # noqa: BLE001
-                logger.warning("storage delete failed for %s: %s", asset.path, exc)
+                # Log loudly: the asset row is still dropped below, but the
+                # object remains in the bucket (e.g. missing DeleteObject perm).
+                logger.error(
+                    "storage delete failed for %s (kind=%s): %s",
+                    asset.path, backend.kind if backend else "?", exc,
+                )
             freed += asset.size
             db.delete(asset)
     _delete_local_only(cp)
