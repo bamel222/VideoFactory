@@ -3,12 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import unicodedata
 
 from sqlalchemy.orm import Session
 
 from app.agents.provider_client import build_provider_client
 from app.core.audit import audit_log
-from app.models import JobTask, Provider
+from app.models import Episode, JobTask, Provider, Series
 from app.orchestrator.checkpoints import save_checkpoint
 from app.registries.storage_registry import StorageRegistry
 
@@ -25,6 +27,42 @@ def _estimate_units(task: JobTask) -> float:
     return ESTIMATED_UNITS.get(task.task_type, 100.0)
 
 
+def _slugify(text: str) -> str:
+    """Turn a series title into a filesystem-safe slug (lowercase, ASCII)."""
+    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
+    return text[:80] or "serie"
+
+
+def _episode_number(db: Session, episode_id: int | None) -> int:
+    """Return the 1-based episode number (falls back to the episode id)."""
+    if episode_id is None:
+        return 1
+    ep = db.get(Episode, episode_id) if db is not None else None
+    return ep.number if ep and ep.number else episode_id
+
+
+def _storage_path(db: Session, task: JobTask, series: Series | None, basename: str) -> str:
+    """Build the object key for a produced file.
+
+    Final deliverables are placed under a human-readable path:
+        series/<title-slug>/episode_<N>/final.mp4  (or short.mp4)
+    Intermediate files go under a temporary 'working' prefix and are cleaned up
+    after a successful run.
+    """
+    ext = os.path.splitext(basename)[1] or ""
+    if task.task_type == "final_assembly":
+        n = _episode_number(db, task.episode_id)
+        title = _slugify(series.title) if series else "serie"
+        return f"series/{title}/episode_{n}/final{ext}"
+    if task.task_type == "shorts_package":
+        n = _episode_number(db, task.episode_id)
+        title = _slugify(series.title) if series else "serie"
+        return f"series/{title}/episode_{n}/short{ext}"
+    sid = series.id if series else task.series_id
+    return f"series/{sid}/working/task_{task.id}/{basename}"
+
+
 def execute_task(db: Session, task: JobTask, provider: Provider) -> JobTask:
     """Run one task against a provider and persist a checkpoint. Idempotent via checkpoints."""
     client = build_provider_client(provider, db)
@@ -36,12 +74,10 @@ def execute_task(db: Session, task: JobTask, provider: Provider) -> JobTask:
         path = result.get("path")
         if path:
             try:
-                from app.models import Series
-
                 series = db.get(Series, task.series_id)
                 workspace_id = series.workspace_id if series else provider.workspace_id
                 if os.path.exists(path):
-                    rel = f"series/{task.series_id}/task_{task.id}/{os.path.basename(path)}"
+                    rel = _storage_path(db, task, series, os.path.basename(path))
                     assets = StorageRegistry(db, workspace_id).store_asset_stream(
                         rel, path, kind=result.get("type", "file")
                     )
